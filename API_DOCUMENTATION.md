@@ -1340,6 +1340,117 @@ x-access-token: <JWT_TOKEN>
 
 ---
 
+## ⚙️ Settings Endpoints
+
+### 1. Set Setting
+```http
+POST /api/v1/settings
+Content-Type: application/json
+x-access-token: <JWT_TOKEN>
+
+{
+  "key": "theme",
+  "value": "dark"
+}
+```
+
+**Common Settings:**
+- `theme`: "light" | "dark"
+- `language`: "en" | "es" | "ca"
+- `notifications_enabled`: "true" | "false"
+- `email_notifications`: "true" | "false"
+- `push_notifications`: "true" | "false"
+
+### 2. Set Multiple Settings
+```http
+POST /api/v1/settings/bulk
+Content-Type: application/json
+x-access-token: <JWT_TOKEN>
+
+{
+  "settings": {
+    "theme": "dark",
+    "language": "es",
+    "notifications_enabled": "true"
+  }
+}
+```
+
+### 3. Get Specific Setting
+```http
+GET /api/v1/settings/{key}
+x-access-token: <JWT_TOKEN>
+```
+
+**Response:**
+```json
+{
+  "id": 1,
+  "user_id": 1,
+  "key": "theme",
+  "value": "dark",
+  "created_at": "2025-01-27T10:00:00Z",
+  "updated_at": "2025-01-27T10:00:00Z"
+}
+```
+
+### 4. Get All Settings (List)
+```http
+GET /api/v1/settings
+x-access-token: <JWT_TOKEN>
+```
+
+**Response:**
+```json
+{
+  "settings": [
+    {
+      "id": 1,
+      "user_id": 1,
+      "key": "theme",
+      "value": "dark",
+      "created_at": "2025-01-27T10:00:00Z",
+      "updated_at": "2025-01-27T10:00:00Z"
+    }
+  ],
+  "total": 3
+}
+```
+
+### 5. Get Settings Dictionary
+```http
+GET /api/v1/settings/dict/all
+x-access-token: <JWT_TOKEN>
+```
+
+**Response:**
+Simple key-value dictionary format
+```json
+{
+  "settings": {
+    "theme": "dark",
+    "language": "es",
+    "notifications_enabled": "true"
+  }
+}
+```
+
+### 6. Delete Specific Setting
+```http
+DELETE /api/v1/settings/{key}
+x-access-token: <JWT_TOKEN>
+```
+
+### 7. Delete All Settings
+```http
+DELETE /api/v1/settings
+x-access-token: <JWT_TOKEN>
+```
+
+⚠️ Warning: Deletes ALL user settings permanently
+
+---
+
 ## 🔧 Testing with cURL
 
 ### Login Example
@@ -1390,7 +1501,7 @@ All endpoints return errors in this format:
 
 ## 📊 Implementation Status
 
-### ✅ Completed Endpoints: 109/152 (72%)
+### ✅ Completed Endpoints: 121/152 (80%)
 
 #### Authentication (15 endpoints) ✅
 - Login, Register (3-step), OTP, Password management, Token operations
@@ -1464,8 +1575,21 @@ All endpoints return errors in this format:
 - Message replies support
 - Soft delete for messages
 
+#### Settings (7 endpoints) ✅
+- Set single or multiple settings
+- Get settings (individual, list, or dictionary format)
+- Delete settings (individual or all)
+- Key-value storage for user preferences
+- Common settings: theme, language, notifications
+
+#### Users (5 endpoints) ✅
+- Basic CRUD operations for users
+- Get user by ID
+- List users with pagination
+- Create, update, delete users
+
 ### 🔄 Pending:
-- Others (43 endpoints)
+- Others (31 endpoints)
 
 ---
 
