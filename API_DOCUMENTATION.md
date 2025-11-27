@@ -1153,6 +1153,193 @@ x-access-token: <JWT_TOKEN>
 
 ---
 
+## 💬 Messaging Endpoints
+
+### 1. Create Conversation
+```http
+POST /api/v1/messaging/conversations
+Content-Type: application/json
+x-access-token: <JWT_TOKEN>
+
+{
+  "user_id": 2
+}
+```
+
+**Response:**
+Creates new direct conversation or returns existing one between users
+
+```json
+{
+  "id": 1,
+  "type": "direct",
+  "title": null,
+  "image_url": null,
+  "channel_id": null,
+  "created_at": "2025-01-27T10:00:00Z",
+  "updated_at": "2025-01-27T10:00:00Z",
+  "unread_count": 0,
+  "last_message": null,
+  "participants": [
+    {
+      "id": 1,
+      "username": "user1",
+      "nombre": "User",
+      "apellidos": "One",
+      "profile_image_url": "https://..."
+    },
+    {
+      "id": 2,
+      "username": "user2",
+      "nombre": "User",
+      "apellidos": "Two",
+      "profile_image_url": "https://..."
+    }
+  ]
+}
+```
+
+### 2. Get Conversations
+```http
+GET /api/v1/messaging/conversations?page=1&page_size=20
+x-access-token: <JWT_TOKEN>
+```
+
+**Response:**
+```json
+{
+  "conversations": [
+    {
+      "id": 1,
+      "type": "direct",
+      "unread_count": 3,
+      "last_message": {
+        "id": 45,
+        "content": "Hello!",
+        "created_at": "2025-01-27T10:00:00Z",
+        "sender": {
+          "id": 2,
+          "username": "user2"
+        }
+      },
+      "participants": [...]
+    }
+  ],
+  "total": 15,
+  "page": 1,
+  "page_size": 20,
+  "has_more": false
+}
+```
+
+### 3. Get Conversation by ID
+```http
+GET /api/v1/messaging/conversations/{conversation_id}
+x-access-token: <JWT_TOKEN>
+```
+
+**Requirements:**
+- User must be a participant in the conversation
+
+### 4. Delete Conversation
+```http
+DELETE /api/v1/messaging/conversations/{conversation_id}
+x-access-token: <JWT_TOKEN>
+```
+
+### 5. Mark Conversation as Read
+```http
+PATCH /api/v1/messaging/conversations/{conversation_id}/read
+x-access-token: <JWT_TOKEN>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Conversation marked as read"
+}
+```
+
+### 6. Send Message
+```http
+POST /api/v1/messaging/messages
+Content-Type: application/json
+x-access-token: <JWT_TOKEN>
+
+{
+  "conversation_id": 1,
+  "content": "Hello! How are you?",
+  "reply_to_message_id": null
+}
+```
+
+**Requirements:**
+- User must be a participant in the conversation
+- Automatically increments unread count for other participants
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": {
+    "id": 46,
+    "conversation_id": 1,
+    "sender_id": 1,
+    "content": "Hello! How are you?",
+    "message_type": "text",
+    "reply_to_message_id": null,
+    "is_deleted": false,
+    "created_at": "2025-01-27T10:00:00Z",
+    "edited_at": null,
+    "sender": {
+      "id": 1,
+      "username": "user1",
+      "profile_image_url": "https://..."
+    }
+  }
+}
+```
+
+### 7. Get Messages
+```http
+GET /api/v1/messaging/conversations/{conversation_id}/messages?page=1&page_size=50
+x-access-token: <JWT_TOKEN>
+```
+
+**Query Parameters:**
+- `page` (optional): Page number (default: 1)
+- `page_size` (optional): Messages per page (default: 50, max: 100)
+
+**Response:**
+Returns messages in descending order (newest first)
+
+### 8. Update Message
+```http
+PUT /api/v1/messaging/messages/{message_id}
+Content-Type: application/json
+x-access-token: <JWT_TOKEN>
+
+{
+  "content": "Updated message content"
+}
+```
+
+**Requirements:**
+- Only the message sender can update it
+
+### 9. Delete Message
+```http
+DELETE /api/v1/messaging/messages/{message_id}
+x-access-token: <JWT_TOKEN>
+```
+
+**Requirements:**
+- Only the message sender can delete it
+- Soft delete (message marked as deleted, not removed from database)
+
+---
+
 ## 🔧 Testing with cURL
 
 ### Login Example
@@ -1203,7 +1390,7 @@ All endpoints return errors in this format:
 
 ## 📊 Implementation Status
 
-### ✅ Completed Endpoints: 100/152 (66%)
+### ✅ Completed Endpoints: 109/152 (72%)
 
 #### Authentication (15 endpoints) ✅
 - Login, Register (3-step), OTP, Password management, Token operations
@@ -1267,8 +1454,17 @@ All endpoints return errors in this format:
 - Get unread count
 - Supports multiple notification types (like, comment, follow, event, post, channel)
 
+#### Messaging (9 endpoints) ✅
+- Create/get direct conversations
+- Get user conversations list
+- Send, update, delete messages
+- Get conversation messages (paginated)
+- Mark conversation as read
+- Unread count tracking
+- Message replies support
+- Soft delete for messages
+
 ### 🔄 Pending:
-- Messaging (9 endpoints)
 - Others (43 endpoints)
 
 ---
