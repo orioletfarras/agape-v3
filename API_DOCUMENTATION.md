@@ -871,6 +871,288 @@ x-access-token: <JWT_TOKEN>
 
 ---
 
+## 💬 Comments Endpoints
+
+### 1. Create Comment
+```http
+POST /api/v1/comments
+Content-Type: application/json
+x-access-token: <JWT_TOKEN>
+
+{
+  "post_id": 1,
+  "content": "Great post! This is very helpful."
+}
+```
+
+**Requirements:**
+- Must be authenticated
+- Post must exist
+
+### 2. Get Post Comments
+```http
+GET /api/v1/comments/post/{post_id}?page=1&page_size=20
+x-access-token: <JWT_TOKEN>
+```
+
+**Response:**
+```json
+{
+  "comments": [
+    {
+      "id": 1,
+      "post_id": 1,
+      "user_id": 2,
+      "content": "Great post!",
+      "created_at": "2025-01-27T10:00:00Z",
+      "updated_at": "2025-01-27T10:00:00Z",
+      "user": {
+        "id": 2,
+        "username": "johndoe",
+        "nombre": "John",
+        "apellidos": "Doe",
+        "profile_image_url": "https://..."
+      }
+    }
+  ],
+  "total": 45,
+  "page": 1,
+  "page_size": 20,
+  "has_more": true
+}
+```
+
+### 3. Update Comment
+```http
+PUT /api/v1/comments/{comment_id}
+Content-Type: application/json
+x-access-token: <JWT_TOKEN>
+
+{
+  "content": "Updated comment content"
+}
+```
+
+**Requirements:**
+- Only the comment author can update it
+
+### 4. Delete Comment
+```http
+DELETE /api/v1/comments/{comment_id}
+x-access-token: <JWT_TOKEN>
+```
+
+**Requirements:**
+- Only the comment author can delete it
+
+---
+
+## 👥 Social Endpoints
+
+### 1. Follow User
+```http
+POST /api/v1/social/follow/{user_id}
+x-access-token: <JWT_TOKEN>
+```
+
+**Requirements:**
+- Cannot follow yourself
+- Cannot follow the same user twice
+
+**Response:**
+```json
+{
+  "success": true,
+  "is_following": true,
+  "message": "Successfully followed user"
+}
+```
+
+### 2. Unfollow User
+```http
+DELETE /api/v1/social/follow/{user_id}
+x-access-token: <JWT_TOKEN>
+```
+
+### 3. Get User Followers
+```http
+GET /api/v1/social/followers/{user_id}?page=1&page_size=20
+x-access-token: <JWT_TOKEN>
+```
+
+**Response:**
+```json
+{
+  "users": [
+    {
+      "id": 2,
+      "username": "johndoe",
+      "nombre": "John",
+      "apellidos": "Doe",
+      "profile_image_url": "https://...",
+      "bio": "Developer",
+      "followers_count": 120,
+      "following_count": 85,
+      "is_following": false,
+      "is_followed_by": true
+    }
+  ],
+  "total": 120,
+  "page": 1,
+  "page_size": 20,
+  "has_more": true
+}
+```
+
+### 4. Get User Following
+```http
+GET /api/v1/social/following/{user_id}?page=1&page_size=20
+x-access-token: <JWT_TOKEN>
+```
+
+### 5. Search Users
+```http
+GET /api/v1/social/search?q=john&page=1&page_size=20
+x-access-token: <JWT_TOKEN>
+```
+
+**Query Parameters:**
+- `q` (required): Search query (username, name, or surname)
+- `page` (optional): Page number
+- `page_size` (optional): Items per page (max: 100)
+
+### 6. Get Suggested Users
+```http
+GET /api/v1/social/suggestions?limit=10
+x-access-token: <JWT_TOKEN>
+```
+
+**Response:**
+Returns users that the current user is not following yet
+
+### 7. Get Social Statistics
+```http
+GET /api/v1/social/stats/{user_id}
+x-access-token: <JWT_TOKEN>
+```
+
+**Response:**
+```json
+{
+  "user_id": 1,
+  "followers_count": 120,
+  "following_count": 85,
+  "posts_count": 42
+}
+```
+
+---
+
+## 🔔 Notifications Endpoints
+
+### 1. Get Notifications
+```http
+GET /api/v1/notifications?page=1&page_size=20&unread_only=false
+x-access-token: <JWT_TOKEN>
+```
+
+**Query Parameters:**
+- `unread_only` (optional): Filter only unread notifications
+- `page` (optional): Page number
+- `page_size` (optional): Items per page (max: 100)
+
+**Response:**
+```json
+{
+  "notifications": [
+    {
+      "id": 1,
+      "user_id": 1,
+      "type": "like",
+      "title": "New Like",
+      "message": "John Doe liked your post",
+      "related_id": 123,
+      "image_url": "https://...",
+      "is_read": false,
+      "created_at": "2025-01-27T10:00:00Z"
+    }
+  ],
+  "total": 45,
+  "unread_count": 12,
+  "page": 1,
+  "page_size": 20,
+  "has_more": true
+}
+```
+
+### 2. Get Notification Statistics
+```http
+GET /api/v1/notifications/stats
+x-access-token: <JWT_TOKEN>
+```
+
+**Response:**
+```json
+{
+  "total_count": 45,
+  "unread_count": 12,
+  "read_count": 33
+}
+```
+
+### 3. Mark Notification as Read
+```http
+PATCH /api/v1/notifications/{notification_id}/read
+x-access-token: <JWT_TOKEN>
+```
+
+**Requirements:**
+- Only the notification owner can mark it as read
+
+### 4. Mark All as Read
+```http
+PATCH /api/v1/notifications/read-all
+x-access-token: <JWT_TOKEN>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Marked 12 notifications as read"
+}
+```
+
+### 5. Delete Notification
+```http
+DELETE /api/v1/notifications/{notification_id}
+x-access-token: <JWT_TOKEN>
+```
+
+**Requirements:**
+- Only the notification owner can delete it
+
+### 6. Delete All Notifications
+```http
+DELETE /api/v1/notifications
+x-access-token: <JWT_TOKEN>
+```
+
+### 7. Get Unread Count
+```http
+GET /api/v1/notifications/unread/count
+x-access-token: <JWT_TOKEN>
+```
+
+**Response:**
+```json
+{
+  "unread_count": 12
+}
+```
+
+---
+
 ## 🔧 Testing with cURL
 
 ### Login Example
@@ -921,7 +1203,7 @@ All endpoints return errors in this format:
 
 ## 📊 Implementation Status
 
-### ✅ Completed Endpoints: 82/152 (54%)
+### ✅ Completed Endpoints: 100/152 (66%)
 
 #### Authentication (15 endpoints) ✅
 - Login, Register (3-step), OTP, Password management, Token operations
@@ -963,11 +1245,30 @@ All endpoints return errors in this format:
 - Events filtered by subscribed channels
 - Upload event images
 
+#### Comments (4 endpoints) ✅
+- Create, Read, Update, Delete comments
+- Get comments for posts with pagination
+- Only comment author can update/delete
+- Author information included in responses
+
+#### Social (7 endpoints) ✅
+- Follow/unfollow users
+- Get followers and following lists
+- Search users by username/name
+- Get suggested users to follow
+- Social statistics (followers, following, posts count)
+- Relationship status (is_following, is_followed_by)
+
+#### Notifications (7 endpoints) ✅
+- Get notifications (with unread filter)
+- Mark notification(s) as read
+- Delete notification(s)
+- Get notification statistics
+- Get unread count
+- Supports multiple notification types (like, comment, follow, event, post, channel)
+
 ### 🔄 Pending:
-- Comments (4 endpoints)
 - Messaging (9 endpoints)
-- Notifications (7 endpoints)
-- Social (7 endpoints)
 - Others (43 endpoints)
 
 ---
