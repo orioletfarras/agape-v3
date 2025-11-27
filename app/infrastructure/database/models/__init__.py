@@ -77,6 +77,22 @@ from app.infrastructure.database.models.social import (
 # Settings models
 from app.infrastructure.database.models.settings import UserSetting
 
+# Debug models
+from app.infrastructure.database.models.debug import DebugLog
+
+# Prayer Life models
+from app.infrastructure.database.models.prayer_life import (
+    AutomaticChannelContent,
+    UserChannelOrder,
+    PrayerLifeWebAccess,
+)
+
+# Donation models
+from app.infrastructure.database.models.donation import (
+    Donation,
+    DonationCertificate,
+)
+
 __all__ = [
     # User
     "User",
@@ -128,4 +144,13 @@ __all__ = [
     "PollVote",
     # Settings
     "UserSetting",
+    # Debug
+    "DebugLog",
+    # Prayer Life
+    "AutomaticChannelContent",
+    "UserChannelOrder",
+    "PrayerLifeWebAccess",
+    # Donations
+    "Donation",
+    "DonationCertificate",
 ]
