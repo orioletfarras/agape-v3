@@ -726,6 +726,151 @@ x-access-token: <JWT_TOKEN>
 
 ---
 
+## 📅 Events Endpoints
+
+### 1. Create Event
+```http
+POST /api/v1/events
+Content-Type: application/json
+x-access-token: <JWT_TOKEN>
+
+{
+  "channel_id": 1,
+  "name": "Youth Retreat 2025",
+  "description": "Annual youth retreat",
+  "event_date": "2025-06-15T10:00:00Z",
+  "end_date": "2025-06-17T16:00:00Z",
+  "location": "Mountain Camp",
+  "max_attendees": 50,
+  "requires_payment": true,
+  "price": 150.00,
+  "currency": "EUR"
+}
+```
+
+### 2. Get Events List
+```http
+GET /api/v1/events?upcoming_only=true&page=1&page_size=20
+x-access-token: <JWT_TOKEN>
+```
+
+### 3. Get Event by ID
+```http
+GET /api/v1/events/{event_id}
+x-access-token: <JWT_TOKEN>
+```
+
+### 4. Update Event
+```http
+PUT /api/v1/events/{event_id}
+Content-Type: application/json
+x-access-token: <JWT_TOKEN>
+
+{
+  "name": "Updated Event Name",
+  "max_attendees": 60
+}
+```
+
+### 5. Delete Event
+```http
+DELETE /api/v1/events/{event_id}
+x-access-token: <JWT_TOKEN>
+```
+
+### 6. Register for Event
+```http
+POST /api/v1/events/{event_id}/register
+x-access-token: <JWT_TOKEN>
+```
+
+### 7. Cancel Registration
+```http
+DELETE /api/v1/events/{event_id}/register
+x-access-token: <JWT_TOKEN>
+```
+
+### 8. Get Event Registrations
+```http
+GET /api/v1/events/{event_id}/registrations?page=1&page_size=20
+x-access-token: <JWT_TOKEN>
+```
+
+### 9. Create Payment Intent
+```http
+POST /api/v1/events/{event_id}/payment-intent?discount_code=SUMMER2025
+x-access-token: <JWT_TOKEN>
+```
+
+### 10. Create Discount Code
+```http
+POST /api/v1/events/{event_id}/discount-codes
+Content-Type: application/json
+x-access-token: <JWT_TOKEN>
+
+{
+  "event_id": 1,
+  "code": "SUMMER2025",
+  "discount_type": "percentage",
+  "discount_value": 20,
+  "max_uses": 50,
+  "valid_until": "2025-06-01T00:00:00Z"
+}
+```
+
+### 11. Apply Discount Code
+```http
+POST /api/v1/events/{event_id}/apply-discount
+Content-Type: application/json
+x-access-token: <JWT_TOKEN>
+
+{
+  "code": "SUMMER2025"
+}
+```
+
+### 12. Create Event Alert
+```http
+POST /api/v1/events/{event_id}/alerts
+Content-Type: application/json
+x-access-token: <JWT_TOKEN>
+
+{
+  "event_id": 1,
+  "title": "Important Update",
+  "message": "Bring warm clothes for the retreat"
+}
+```
+
+### 13. Get Event Alerts
+```http
+GET /api/v1/events/{event_id}/alerts?page=1&page_size=20
+x-access-token: <JWT_TOKEN>
+```
+
+### 14. Get Event Statistics
+```http
+GET /api/v1/events/{event_id}/stats
+x-access-token: <JWT_TOKEN>
+```
+
+### 15. Upload Event Image
+```http
+POST /api/v1/events/upload-image
+Content-Type: multipart/form-data
+x-access-token: <JWT_TOKEN>
+
+file: <image_file>
+```
+
+### 16. Get Channel Events
+```http
+GET /api/v1/events/channel/{channel_id}?upcoming_only=true&page=1&page_size=20
+x-access-token: <JWT_TOKEN>
+```
+
+---
+
 ## 🔧 Testing with cURL
 
 ### Login Example
@@ -776,7 +921,7 @@ All endpoints return errors in this format:
 
 ## 📊 Implementation Status
 
-### ✅ Completed Endpoints: 66/152
+### ✅ Completed Endpoints: 82/152 (54%)
 
 #### Authentication (15 endpoints) ✅
 - Login, Register (3-step), OTP, Password management, Token operations
@@ -808,8 +953,17 @@ All endpoints return errors in this format:
 - Upload channel images
 - Search and filter channels
 
+#### Events (16 endpoints) ✅
+- Create, Read, Update, Delete events
+- Event registration and cancellation
+- Payment integration with Stripe
+- Discount codes system
+- Event alerts for attendees
+- Get registrations and statistics
+- Events filtered by subscribed channels
+- Upload event images
+
 ### 🔄 Pending:
-- Events (19 endpoints)
 - Comments (4 endpoints)
 - Messaging (9 endpoints)
 - Notifications (7 endpoints)
