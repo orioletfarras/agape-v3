@@ -553,6 +553,179 @@ x-access-token: <JWT_TOKEN>
 
 ---
 
+## 🏢 Channels Endpoints
+
+### 1. Create Channel
+```http
+POST /api/v1/channels
+Content-Type: application/json
+x-access-token: <JWT_TOKEN>
+
+{
+  "name": "Youth Group",
+  "description": "Channel for youth activities",
+  "organization_id": 1,
+  "image_url": "https://bucket.s3.amazonaws.com/channel.jpg",
+  "is_private": false
+}
+```
+
+### 2. Get Channels List
+```http
+GET /api/v1/channels?subscribed_only=false&page=1&page_size=20
+x-access-token: <JWT_TOKEN>
+```
+
+### 3. Get Channel by ID
+```http
+GET /api/v1/channels/{channel_id}
+x-access-token: <JWT_TOKEN>
+```
+
+### 4. Update Channel
+```http
+PUT /api/v1/channels/{channel_id}
+Content-Type: application/json
+x-access-token: <JWT_TOKEN>
+
+{
+  "name": "Updated Name",
+  "description": "Updated description"
+}
+```
+
+### 5. Delete Channel
+```http
+DELETE /api/v1/channels/{channel_id}
+x-access-token: <JWT_TOKEN>
+```
+
+### 6. Subscribe to Channel
+```http
+POST /api/v1/channels/{channel_id}/subscribe
+x-access-token: <JWT_TOKEN>
+```
+
+### 7. Unsubscribe from Channel
+```http
+DELETE /api/v1/channels/{channel_id}/subscribe
+x-access-token: <JWT_TOKEN>
+```
+
+### 8. Get Channel Subscribers
+```http
+GET /api/v1/channels/{channel_id}/subscribers?page=1&page_size=20
+x-access-token: <JWT_TOKEN>
+```
+
+### 9. Get My Subscriptions
+```http
+GET /api/v1/channels/my/subscriptions?page=1&page_size=20
+x-access-token: <JWT_TOKEN>
+```
+
+### 10. Add Channel Admin
+```http
+POST /api/v1/channels/{channel_id}/admins
+Content-Type: application/json
+x-access-token: <JWT_TOKEN>
+
+{
+  "user_id": 123
+}
+```
+
+### 11. Remove Channel Admin
+```http
+DELETE /api/v1/channels/{channel_id}/admins/{user_id}
+x-access-token: <JWT_TOKEN>
+```
+
+### 12. Get Channel Admins
+```http
+GET /api/v1/channels/{channel_id}/admins
+x-access-token: <JWT_TOKEN>
+```
+
+### 13. Get Channel Settings
+```http
+GET /api/v1/channels/{channel_id}/settings
+x-access-token: <JWT_TOKEN>
+```
+
+### 14. Update Channel Settings
+```http
+PUT /api/v1/channels/{channel_id}/settings
+Content-Type: application/json
+x-access-token: <JWT_TOKEN>
+
+{
+  "notifications_enabled": true,
+  "post_notifications": true,
+  "event_notifications": true
+}
+```
+
+### 15. Hide Channel
+```http
+POST /api/v1/channels/{channel_id}/hide
+x-access-token: <JWT_TOKEN>
+```
+
+### 16. Unhide Channel
+```http
+DELETE /api/v1/channels/{channel_id}/hide
+x-access-token: <JWT_TOKEN>
+```
+
+### 17. Create Channel Alert
+```http
+POST /api/v1/channels/{channel_id}/alerts
+Content-Type: application/json
+x-access-token: <JWT_TOKEN>
+
+{
+  "channel_id": 1,
+  "title": "Important Announcement",
+  "message": "Meeting tomorrow at 6 PM"
+}
+```
+
+### 18. Get Channel Alerts
+```http
+GET /api/v1/channels/{channel_id}/alerts?page=1&page_size=20
+x-access-token: <JWT_TOKEN>
+```
+
+### 19. Get Channel Statistics
+```http
+GET /api/v1/channels/{channel_id}/stats
+x-access-token: <JWT_TOKEN>
+```
+
+### 20. Upload Channel Image
+```http
+POST /api/v1/channels/upload-image
+Content-Type: multipart/form-data
+x-access-token: <JWT_TOKEN>
+
+file: <image_file>
+```
+
+### 21. Get Organization Channels
+```http
+GET /api/v1/channels/organization/{organization_id}?page=1&page_size=20
+x-access-token: <JWT_TOKEN>
+```
+
+### 22. Search Channels
+```http
+GET /api/v1/channels/search/{query}?page=1&page_size=20
+x-access-token: <JWT_TOKEN>
+```
+
+---
+
 ## 🔧 Testing with cURL
 
 ### Login Example
@@ -603,7 +776,7 @@ All endpoints return errors in this format:
 
 ## 📊 Implementation Status
 
-### ✅ Completed Endpoints: 44/152
+### ✅ Completed Endpoints: 66/152
 
 #### Authentication (15 endpoints) ✅
 - Login, Register (3-step), OTP, Password management, Token operations
@@ -623,8 +796,19 @@ All endpoints return errors in this format:
 - Upload images/videos
 - Get favorites and statistics
 
+#### Channels (22 endpoints) ✅
+- Create, Read, Update, Delete channels
+- Subscribe/unsubscribe to channels
+- Channel admins management
+- Channel settings (notifications)
+- Hide/unhide channels
+- Channel alerts for subscribers
+- Get subscribers, subscriptions, admins
+- Channel statistics
+- Upload channel images
+- Search and filter channels
+
 ### 🔄 Pending:
-- Channels (28 endpoints)
 - Events (19 endpoints)
 - Comments (4 endpoints)
 - Messaging (9 endpoints)
