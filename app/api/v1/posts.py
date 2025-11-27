@@ -360,6 +360,51 @@ async def upload_post_video(
     }
 
 
+@router.post("/upload-post-image-url", status_code=status.HTTP_200_OK)
+async def upload_post_image_from_url(
+    image_url: str,
+    current_user: User = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db)
+):
+    """
+    Upload an image for a post from URL
+
+    **Request:**
+    ```json
+    {
+      "image_url": "https://example.com/image.jpg"
+    }
+    ```
+
+    **Returns:**
+    ```json
+    {
+      "success": true,
+      "image_url": "https://s3.amazonaws.com/..."
+    }
+    ```
+    """
+    import httpx
+    s3_service = S3Service()
+
+    # Download image from URL
+    async with httpx.AsyncClient() as client:
+        response = await client.get(image_url)
+        response.raise_for_status()
+        file_data = response.content
+
+    # Extract filename from URL
+    filename = image_url.split("/")[-1] or "image.jpg"
+
+    # Upload to S3
+    result = await s3_service.upload_post_image(current_user.id, file_data, filename)
+
+    return {
+        "success": True,
+        "image_url": result["url"]
+    }
+
+
 # ============================================================
 # CHANNEL POSTS ENDPOINTS
 # ============================================================
@@ -426,3 +471,109 @@ async def get_event_posts(
         page=page,
         page_size=page_size
     )
+
+
+# ============================================================
+# POST MODERATION ENDPOINTS
+# ============================================================
+
+@router.post("/post-publish/{postId}", status_code=status.HTTP_200_OK)
+async def publish_post(
+    postId: int,
+    current_user: User = Depends(get_current_user),
+    post_service: PostService = Depends(get_post_service)
+):
+    """
+    Publish a post (make it visible)
+
+    **Response:**
+    ```json
+    {
+      "success": true
+    }
+    ```
+    """
+    return await post_service.publish_post(postId)
+
+
+@router.post("/post-unpublish/{postId}", status_code=status.HTTP_200_OK)
+async def unpublish_post(
+    postId: int,
+    current_user: User = Depends(get_current_user),
+    post_service: PostService = Depends(get_post_service)
+):
+    """
+    Unpublish a post (hide it)
+
+    **Response:**
+    ```json
+    {
+      "success": true
+    }
+    ```
+    """
+    return await post_service.unpublish_post(postId)
+
+
+@router.post("/post-mark-reviewed/{postId}", status_code=status.HTTP_200_OK)
+async def mark_post_reviewed(
+    postId: int,
+    current_user: User = Depends(get_current_user),
+    post_service: PostService = Depends(get_post_service)
+):
+    """
+    Mark a post as reviewed by moderator
+
+    **Response:**
+    ```json
+    {
+      "success": true
+    }
+    ```
+    """
+    return await post_service.mark_post_reviewed(postId)
+
+
+@router.post("/suspect_post/{postId}", status_code=status.HTTP_200_OK)
+async def suspect_post(
+    postId: int,
+    current_user: User = Depends(get_current_user),
+    post_service: PostService = Depends(get_post_service)
+):
+    """
+    Mark a post as suspect/reported
+
+    **Response:**
+    ```json
+    {
+      "success": true
+    }
+    ```
+    """
+    return await post_service.mark_post_suspect(postId)
+
+
+@router.get("/get-post-prays-extended/{id_code}", status_code=status.HTTP_200_OK)
+async def get_post_prays_extended(
+    id_code: str,
+    current_user: User = Depends(get_current_user),
+    post_service: PostService = Depends(get_post_service)
+):
+    """
+    Get extended pray information including user details
+
+    **Response:**
+    ```json
+    {
+      "prays": [
+        {
+          "user_id": 1,
+          "username": "john_doe",
+          "profile_image_url": "https://...",
+          "created_at": "hace 2h"
+        }
+      ]
+    }
+    ```
+    """
+    return await post_service.get_post_prays_extended(id_code)

@@ -366,3 +366,84 @@ class PostRepository:
             )
         )
         return result.scalar_one_or_none() is not None
+
+    # ============================================================
+    # POST MODERATION OPERATIONS
+    # ============================================================
+
+    async def publish_post(self, post_id: int) -> bool:
+        """Publish a post"""
+        result = await self.session.execute(
+            select(Post).where(Post.id == post_id)
+        )
+        post = result.scalar_one_or_none()
+        if not post:
+            return False
+
+        post.is_published = True
+        post.updated_at = datetime.utcnow()
+        await self.session.commit()
+        return True
+
+    async def unpublish_post(self, post_id: int) -> bool:
+        """Unpublish a post"""
+        result = await self.session.execute(
+            select(Post).where(Post.id == post_id)
+        )
+        post = result.scalar_one_or_none()
+        if not post:
+            return False
+
+        post.is_published = False
+        post.updated_at = datetime.utcnow()
+        await self.session.commit()
+        return True
+
+    async def mark_post_reviewed(self, post_id: int) -> bool:
+        """Mark post as reviewed"""
+        result = await self.session.execute(
+            select(Post).where(Post.id == post_id)
+        )
+        post = result.scalar_one_or_none()
+        if not post:
+            return False
+
+        post.is_reviewed = True
+        post.updated_at = datetime.utcnow()
+        await self.session.commit()
+        return True
+
+    async def mark_post_suspect(self, post_id: int) -> bool:
+        """Mark post as suspect"""
+        result = await self.session.execute(
+            select(Post).where(Post.id == post_id)
+        )
+        post = result.scalar_one_or_none()
+        if not post:
+            return False
+
+        post.is_suspected = True
+        post.updated_at = datetime.utcnow()
+        await self.session.commit()
+        return True
+
+    async def get_post_prays_extended(self, post_id: int) -> List[dict]:
+        """Get extended pray information including users"""
+        from app.infrastructure.database.models import User
+        result = await self.session.execute(
+            select(PostPray, User)
+            .join(User, PostPray.user_id == User.id)
+            .where(PostPray.post_id == post_id)
+            .order_by(PostPray.created_at.desc())
+        )
+
+        prays = []
+        for pray, user in result.all():
+            prays.append({
+                "user_id": user.id,
+                "username": user.username,
+                "profile_image_url": user.profile_image_url,
+                "created_at": pray.created_at
+            })
+
+        return prays

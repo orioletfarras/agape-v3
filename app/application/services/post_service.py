@@ -433,3 +433,80 @@ class PostService:
             channel=channel,
             event=event
         )
+
+    # ============================================================
+    # POST MODERATION OPERATIONS
+    # ============================================================
+
+    async def publish_post(self, post_id: int) -> dict:
+        """Publish a post"""
+        success = await self.repo.publish_post(post_id)
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Post not found"
+            )
+        return {"success": True}
+
+    async def unpublish_post(self, post_id: int) -> dict:
+        """Unpublish a post"""
+        success = await self.repo.unpublish_post(post_id)
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Post not found"
+            )
+        return {"success": True}
+
+    async def mark_post_reviewed(self, post_id: int) -> dict:
+        """Mark post as reviewed"""
+        success = await self.repo.mark_post_reviewed(post_id)
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Post not found"
+            )
+        return {"success": True}
+
+    async def mark_post_suspect(self, post_id: int) -> dict:
+        """Mark post as suspect/reported"""
+        success = await self.repo.mark_post_suspect(post_id)
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Post not found"
+            )
+        return {"success": True}
+
+    async def get_post_prays_extended(self, id_code: str) -> dict:
+        """Get extended pray information with user details"""
+        # Get post by id_code
+        post = await self.repo.get_post_by_id_code(id_code)
+        if not post:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Post not found"
+            )
+
+        prays = await self.repo.get_post_prays_extended(post.id)
+
+        # Format dates as "hace X tiempo"
+        from datetime import datetime, timedelta
+        formatted_prays = []
+        for pray in prays:
+            time_diff = datetime.utcnow() - pray["created_at"]
+            if time_diff < timedelta(hours=1):
+                time_str = f"hace {int(time_diff.total_seconds() // 60)} min"
+            elif time_diff < timedelta(days=1):
+                time_str = f"hace {int(time_diff.total_seconds() // 3600)} h"
+            else:
+                time_str = f"hace {time_diff.days} días"
+
+            formatted_prays.append({
+                "user_id": pray["user_id"],
+                "username": pray["username"],
+                "profile_image_url": pray["profile_image_url"],
+                "created_at": time_str
+            })
+
+        return {"prays": formatted_prays}
