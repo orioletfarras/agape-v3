@@ -49,6 +49,7 @@ class Channel(Base):
     alerts = relationship("ChannelAlert", back_populates="channel", cascade="all, delete-orphan")
     polls = relationship("Poll", back_populates="channel", cascade="all, delete-orphan")
     hidden_by_users = relationship("HiddenChannel", back_populates="channel", cascade="all, delete-orphan")
+    donations = relationship("Donation", back_populates="channel", cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("idx_channel_id_code", "id_code"),

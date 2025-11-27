@@ -18,9 +18,9 @@ import asyncio
 import sys
 from datetime import datetime, timedelta
 from decimal import Decimal
+import bcrypt
 
 from sqlalchemy import select
-from passlib.context import CryptContext
 
 from app.infrastructure.database import get_db, db
 from app.infrastructure.database.models import (
@@ -39,8 +39,10 @@ from app.infrastructure.database.models import (
     EventRegistration,
 )
 
-# Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def hash_password_bcrypt(password: str) -> str:
+    """Hash password using bcrypt directly (workaround for passlib/Python 3.14 compatibility issue)"""
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
 
 async def clear_data(session):
@@ -105,36 +107,21 @@ async def seed_data():
 
         org1 = Organization(
             name="Parroquia San Pedro",
-            type="parish",
-            address="Calle Mayor 123, Madrid",
-            city="Madrid",
-            country="España",
-            phone="+34 91 123 4567",
-            email="info@sanpedro.es",
+            description="Parroquia ubicada en Madrid - Calle Mayor 123",
             created_at=datetime.utcnow(),
         )
         session.add(org1)
 
         org2 = Organization(
             name="Parroquia Santa María",
-            type="parish",
-            address="Plaza de la Iglesia 5, Barcelona",
-            city="Barcelona",
-            country="España",
-            phone="+34 93 987 6543",
-            email="contacto@santamaria.es",
+            description="Parroquia ubicada en Barcelona - Plaza de la Iglesia 5",
             created_at=datetime.utcnow(),
         )
         session.add(org2)
 
         org3 = Organization(
             name="Parroquia San José",
-            type="parish",
-            address="Avenida Principal 89, Valencia",
-            city="Valencia",
-            country="España",
-            phone="+34 96 555 1234",
-            email="hola@sanjose.es",
+            description="Parroquia ubicada en Valencia - Avenida Principal 89",
             created_at=datetime.utcnow(),
         )
         session.add(org3)
@@ -197,7 +184,7 @@ async def seed_data():
         for user_data in users_data:
             user = User(
                 **user_data,
-                password_hash=pwd_context.hash("password123"),
+                password_hash=hash_password_bcrypt("password123"),
                 is_active=True,
                 is_verified=True,
                 onboarding_completed=True,
@@ -215,37 +202,43 @@ async def seed_data():
         print("\n📺 Creating channels...")
 
         channel1 = Channel(
+            id_code="sanpedro_anuncios",
             name="Anuncios San Pedro",
+            title="Canal Oficial San Pedro",
             description="Canal oficial de comunicaciones de la Parroquia San Pedro",
-            channel_type="official",
+            category="parish",
+            language="es",
             organization_id=org1.id,
-            created_by_user_id=users[0].id,
-            is_public=True,
-            is_verified=True,
+            creator_id=users[0].id,
+            is_automatic=False,
             created_at=datetime.utcnow(),
         )
         session.add(channel1)
 
         channel2 = Channel(
+            id_code="santamaria_noticias",
             name="Santa María Noticias",
+            title="Noticias Santa María",
             description="Noticias y eventos de nuestra parroquia",
-            channel_type="official",
+            category="parish",
+            language="es",
             organization_id=org2.id,
-            created_by_user_id=users[3].id,
-            is_public=True,
-            is_verified=True,
+            creator_id=users[3].id,
+            is_automatic=False,
             created_at=datetime.utcnow(),
         )
         session.add(channel2)
 
         channel3 = Channel(
+            id_code="sanjose_juventud",
             name="Juventud San José",
+            title="Grupo Juvenil San José",
             description="Canal para jóvenes de la parroquia",
-            channel_type="community",
+            category="youth",
+            language="es",
             organization_id=org3.id,
-            created_by_user_id=users[2].id,
-            is_public=True,
-            is_verified=False,
+            creator_id=users[2].id,
+            is_automatic=False,
             created_at=datetime.utcnow(),
         )
         session.add(channel3)
@@ -262,7 +255,6 @@ async def seed_data():
         admin1 = ChannelAdmin(
             channel_id=channel1.id,
             user_id=users[0].id,
-            role="owner",
             created_at=datetime.utcnow(),
         )
         session.add(admin1)
@@ -270,7 +262,6 @@ async def seed_data():
         admin2 = ChannelAdmin(
             channel_id=channel2.id,
             user_id=users[3].id,
-            role="owner",
             created_at=datetime.utcnow(),
         )
         session.add(admin2)
@@ -278,7 +269,6 @@ async def seed_data():
         admin3 = ChannelAdmin(
             channel_id=channel3.id,
             user_id=users[2].id,
-            role="owner",
             created_at=datetime.utcnow(),
         )
         session.add(admin3)
@@ -295,7 +285,7 @@ async def seed_data():
             sub = ChannelSubscription(
                 channel_id=channel1.id,
                 user_id=user.id,
-                subscribed_at=datetime.utcnow(),
+                created_at=datetime.utcnow(),
             )
             session.add(sub)
             subscriptions_count += 1
@@ -305,7 +295,7 @@ async def seed_data():
             sub = ChannelSubscription(
                 channel_id=channel2.id,
                 user_id=user.id,
-                subscribed_at=datetime.utcnow(),
+                created_at=datetime.utcnow(),
             )
             session.add(sub)
             subscriptions_count += 1
@@ -315,7 +305,7 @@ async def seed_data():
             sub = ChannelSubscription(
                 channel_id=channel3.id,
                 user_id=user.id,
-                subscribed_at=datetime.utcnow(),
+                created_at=datetime.utcnow(),
             )
             session.add(sub)
             subscriptions_count += 1
@@ -327,63 +317,73 @@ async def seed_data():
 
         posts_data = [
             {
+                "id_code": f"post_{channel1.id}_1",
                 "channel_id": channel1.id,
-                "user_id": users[0].id,
-                "content": "¡Bienvenidos al canal de la Parroquia San Pedro! Aquí compartiremos noticias, eventos y reflexiones.",
+                "author_id": users[0].id,
+                "text": "¡Bienvenidos al canal de la Parroquia San Pedro! Aquí compartiremos noticias, eventos y reflexiones.",
                 "is_published": True,
             },
             {
+                "id_code": f"post_{channel1.id}_2",
                 "channel_id": channel1.id,
-                "user_id": users[1].id,
-                "content": "Mañana tenemos la misa de 10am. ¡Los esperamos a todos! 🙏",
+                "author_id": users[1].id,
+                "text": "Mañana tenemos la misa de 10am. ¡Los esperamos a todos! 🙏",
                 "is_published": True,
             },
             {
+                "id_code": f"post_{channel1.id}_3",
                 "channel_id": channel1.id,
-                "user_id": users[0].id,
-                "content": "Recordatorio: Este sábado tenemos el retiro de Adviento. Inscripciones abiertas.",
+                "author_id": users[0].id,
+                "text": "Recordatorio: Este sábado tenemos el retiro de Adviento. Inscripciones abiertas.",
                 "is_published": True,
             },
             {
+                "id_code": f"post_{channel2.id}_1",
                 "channel_id": channel2.id,
-                "user_id": users[3].id,
-                "content": "Santa María les desea un feliz domingo. Que Dios los bendiga.",
+                "author_id": users[3].id,
+                "text": "Santa María les desea un feliz domingo. Que Dios los bendiga.",
                 "is_published": True,
             },
             {
+                "id_code": f"post_{channel2.id}_2",
                 "channel_id": channel2.id,
-                "user_id": users[3].id,
-                "content": "Estamos organizando una campaña de recogida de alimentos. ¿Quién se anima a ayudar?",
+                "author_id": users[3].id,
+                "text": "Estamos organizando una campaña de recogida de alimentos. ¿Quién se anima a ayudar?",
                 "is_published": True,
             },
             {
+                "id_code": f"post_{channel2.id}_3",
                 "channel_id": channel2.id,
-                "user_id": users[4].id,
-                "content": "Gracias a todos los que participaron en el rosario de hoy. Fue muy emotivo 🌹",
+                "author_id": users[4].id,
+                "text": "Gracias a todos los que participaron en el rosario de hoy. Fue muy emotivo 🌹",
                 "is_published": True,
             },
             {
+                "id_code": f"post_{channel3.id}_1",
                 "channel_id": channel3.id,
-                "user_id": users[2].id,
-                "content": "Jóvenes de San José: Este viernes reunión a las 19:00. ¡No falten!",
+                "author_id": users[2].id,
+                "text": "Jóvenes de San José: Este viernes reunión a las 19:00. ¡No falten!",
                 "is_published": True,
             },
             {
+                "id_code": f"post_{channel3.id}_2",
                 "channel_id": channel3.id,
-                "user_id": users[4].id,
-                "content": "¿Alguien se apunta para ir al concierto de música cristiana el próximo mes?",
+                "author_id": users[4].id,
+                "text": "¿Alguien se apunta para ir al concierto de música cristiana el próximo mes?",
                 "is_published": True,
             },
             {
+                "id_code": f"post_{channel1.id}_4",
                 "channel_id": channel1.id,
-                "user_id": users[0].id,
-                "content": "Les comparto esta reflexión del día: 'Ama a tu prójimo como a ti mismo' - Marcos 12:31",
+                "author_id": users[0].id,
+                "text": "Les comparto esta reflexión del día: 'Ama a tu prójimo como a ti mismo' - Marcos 12:31",
                 "is_published": True,
             },
             {
+                "id_code": f"post_{channel3.id}_3",
                 "channel_id": channel3.id,
-                "user_id": users[2].id,
-                "content": "Próximo retiro juvenil: 15-17 de diciembre. Más info próximamente.",
+                "author_id": users[2].id,
+                "text": "Próximo retiro juvenil: 15-17 de diciembre. Más info próximamente.",
                 "is_published": True,
             },
         ]
@@ -451,29 +451,34 @@ async def seed_data():
 
         comments_data = [
             {
+                "id_code": f"comment_{posts[0].id}_1",
                 "post_id": posts[0].id,
-                "user_id": users[1].id,
-                "content": "¡Qué alegría estar aquí! Bendiciones a todos.",
+                "author_id": users[1].id,
+                "text_comment": "¡Qué alegría estar aquí! Bendiciones a todos.",
             },
             {
+                "id_code": f"comment_{posts[0].id}_2",
                 "post_id": posts[0].id,
-                "user_id": users[3].id,
-                "content": "Gracias por crear este espacio de comunión.",
+                "author_id": users[3].id,
+                "text_comment": "Gracias por crear este espacio de comunión.",
             },
             {
+                "id_code": f"comment_{posts[1].id}_1",
                 "post_id": posts[1].id,
-                "user_id": users[2].id,
-                "content": "Allí estaré. Que Dios los bendiga.",
+                "author_id": users[2].id,
+                "text_comment": "Allí estaré. Que Dios los bendiga.",
             },
             {
+                "id_code": f"comment_{posts[4].id}_1",
                 "post_id": posts[4].id,
-                "user_id": users[0].id,
-                "content": "Me apunto para ayudar en la campaña.",
+                "author_id": users[0].id,
+                "text_comment": "Me apunto para ayudar en la campaña.",
             },
             {
+                "id_code": f"comment_{posts[7].id}_1",
                 "post_id": posts[7].id,
-                "user_id": users[2].id,
-                "content": "¡Yo voy! Me encanta la música cristiana.",
+                "author_id": users[2].id,
+                "text_comment": "¡Yo voy! Me encanta la música cristiana.",
             },
         ]
 
@@ -497,39 +502,32 @@ async def seed_data():
                 "title": "Retiro de Adviento",
                 "description": "Retiro espiritual de preparación para la Navidad. Incluye reflexiones, oración y compartir comunitario.",
                 "location": "Casa de Retiros San Francisco",
-                "event_date": datetime.utcnow() + timedelta(days=7),
-                "registration_deadline": datetime.utcnow() + timedelta(days=5),
-                "max_capacity": 50,
-                "price": Decimal("15.00"),
-                "currency": "EUR",
-                "requires_payment": True,
-                "created_by_user_id": users[0].id,
+                "start_date": datetime.utcnow() + timedelta(days=7),
+                "end_date": datetime.utcnow() + timedelta(days=9),
+                "goal_attendees": 50,
+                "event_price": Decimal("15.00"),
+                "is_active": True,
             },
             {
                 "channel_id": channel2.id,
                 "title": "Campaña de Recogida de Alimentos",
                 "description": "Evento solidario para recoger alimentos no perecederos para familias necesitadas.",
                 "location": "Parroquia Santa María",
-                "event_date": datetime.utcnow() + timedelta(days=3),
-                "registration_deadline": datetime.utcnow() + timedelta(days=2),
-                "max_capacity": 100,
-                "price": Decimal("0.00"),
-                "currency": "EUR",
-                "requires_payment": False,
-                "created_by_user_id": users[3].id,
+                "start_date": datetime.utcnow() + timedelta(days=3),
+                "goal_attendees": 100,
+                "event_price": Decimal("0.00"),
+                "is_active": True,
             },
             {
                 "channel_id": channel3.id,
                 "title": "Retiro Juvenil de Diciembre",
                 "description": "Encuentro para jóvenes con actividades, reflexión y convivencia. ¡No te lo pierdas!",
                 "location": "Albergue Juvenil Monte Alto",
-                "event_date": datetime.utcnow() + timedelta(days=20),
-                "registration_deadline": datetime.utcnow() + timedelta(days=15),
-                "max_capacity": 30,
-                "price": Decimal("25.00"),
-                "currency": "EUR",
-                "requires_payment": True,
-                "created_by_user_id": users[2].id,
+                "start_date": datetime.utcnow() + timedelta(days=20),
+                "end_date": datetime.utcnow() + timedelta(days=22),
+                "goal_attendees": 30,
+                "event_price": Decimal("25.00"),
+                "is_active": True,
             },
         ]
 
@@ -550,18 +548,18 @@ async def seed_data():
 
         registrations_data = [
             # Event 1: 3 registrations
-            {"event_id": events[0].id, "user_id": users[1].id},
-            {"event_id": events[0].id, "user_id": users[2].id},
-            {"event_id": events[0].id, "user_id": users[3].id},
+            {"event_id": events[0].id, "user_id": users[1].id, "ticket_code": f"TICKET_{events[0].id}_{users[1].id}", "total_price": Decimal("15.00"), "payment_option": "full"},
+            {"event_id": events[0].id, "user_id": users[2].id, "ticket_code": f"TICKET_{events[0].id}_{users[2].id}", "total_price": Decimal("15.00"), "payment_option": "full"},
+            {"event_id": events[0].id, "user_id": users[3].id, "ticket_code": f"TICKET_{events[0].id}_{users[3].id}", "total_price": Decimal("15.00"), "payment_option": "full"},
             # Event 2: 5 registrations
-            {"event_id": events[1].id, "user_id": users[0].id},
-            {"event_id": events[1].id, "user_id": users[1].id},
-            {"event_id": events[1].id, "user_id": users[2].id},
-            {"event_id": events[1].id, "user_id": users[3].id},
-            {"event_id": events[1].id, "user_id": users[4].id},
+            {"event_id": events[1].id, "user_id": users[0].id, "ticket_code": f"TICKET_{events[1].id}_{users[0].id}", "total_price": Decimal("0.00"), "payment_option": "free"},
+            {"event_id": events[1].id, "user_id": users[1].id, "ticket_code": f"TICKET_{events[1].id}_{users[1].id}", "total_price": Decimal("0.00"), "payment_option": "free"},
+            {"event_id": events[1].id, "user_id": users[2].id, "ticket_code": f"TICKET_{events[1].id}_{users[2].id}", "total_price": Decimal("0.00"), "payment_option": "free"},
+            {"event_id": events[1].id, "user_id": users[3].id, "ticket_code": f"TICKET_{events[1].id}_{users[3].id}", "total_price": Decimal("0.00"), "payment_option": "free"},
+            {"event_id": events[1].id, "user_id": users[4].id, "ticket_code": f"TICKET_{events[1].id}_{users[4].id}", "total_price": Decimal("0.00"), "payment_option": "free"},
             # Event 3: 2 registrations
-            {"event_id": events[2].id, "user_id": users[2].id},
-            {"event_id": events[2].id, "user_id": users[4].id},
+            {"event_id": events[2].id, "user_id": users[2].id, "ticket_code": f"TICKET_{events[2].id}_{users[2].id}", "total_price": Decimal("25.00"), "payment_option": "full"},
+            {"event_id": events[2].id, "user_id": users[4].id, "ticket_code": f"TICKET_{events[2].id}_{users[4].id}", "total_price": Decimal("25.00"), "payment_option": "full"},
         ]
 
         for reg_data in registrations_data:

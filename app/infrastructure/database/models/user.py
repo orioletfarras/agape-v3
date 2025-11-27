@@ -70,6 +70,7 @@ class User(Base):
     post_prays = relationship("PostPray", back_populates="user", cascade="all, delete-orphan")
     post_favorites = relationship("PostFavorite", back_populates="user", cascade="all, delete-orphan")
     hidden_posts = relationship("HiddenPost", back_populates="user", cascade="all, delete-orphan")
+    donations = relationship("Donation", back_populates="user", cascade="all, delete-orphan")
 
     # Indexes
     __table_args__ = (
