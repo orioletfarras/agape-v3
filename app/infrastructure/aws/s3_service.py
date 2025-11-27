@@ -134,20 +134,30 @@ class S3Service:
             quality=90,
         )
 
-    async def upload_post_image(self, file_data: bytes) -> str:
+    async def upload_post_image(self, user_id: int, file_data: bytes, filename: Optional[str] = None) -> dict:
         """Upload post image"""
-        return await self.upload_image(
+        url = await self.upload_image(
             file_data=file_data,
             prefix=settings.AWS_S3_POST_IMAGES_PREFIX,
         )
+        return {"url": url, "key": url.split(f"{self.bucket}.s3.{self.region}.amazonaws.com/")[-1]}
 
-    async def upload_post_video(self, file_data: bytes, content_type: str) -> str:
+    async def upload_post_video(self, user_id: int, file_data: bytes, filename: Optional[str] = None) -> dict:
         """Upload post video"""
-        return await self.upload_file(
+        # Determine content type from filename
+        content_type = "video/mp4"  # default
+        if filename:
+            if filename.lower().endswith(".mov") or filename.lower().endswith(".quicktime"):
+                content_type = "video/quicktime"
+            elif filename.lower().endswith(".avi"):
+                content_type = "video/x-msvideo"
+
+        url = await self.upload_file(
             file_data=file_data,
             prefix=settings.AWS_S3_POST_VIDEOS_PREFIX,
             content_type=content_type,
         )
+        return {"url": url, "key": url.split(f"{self.bucket}.s3.{self.region}.amazonaws.com/")[-1]}
 
     async def upload_channel_image(self, file_data: bytes) -> str:
         """Upload channel image"""

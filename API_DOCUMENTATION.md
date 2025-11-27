@@ -390,6 +390,169 @@ GET /api/v1/search-parishes?q=San&limit=100
 
 ---
 
+## 📝 Posts Endpoints
+
+### 1. Create Post
+```http
+POST /api/v1/posts
+Content-Type: application/json
+x-access-token: <JWT_TOKEN>
+
+{
+  "channel_id": 1,
+  "content": "This is my post content",
+  "images": ["https://bucket.s3.amazonaws.com/image1.jpg"],
+  "videos": [],
+  "event_id": null
+}
+```
+
+**Requirements:**
+- User must be subscribed to the channel
+- Returns 403 if not subscribed
+
+### 2. Get Posts Feed
+```http
+GET /api/v1/posts?page=1&page_size=20
+x-access-token: <JWT_TOKEN>
+```
+
+**Query Parameters:**
+- `channel_id` (optional): Filter by channel
+- `author_id` (optional): Filter by author
+- `event_id` (optional): Filter by event
+- `include_hidden` (optional): Include hidden posts (default: false)
+- `only_favorites` (optional): Only show favorites (default: false)
+- `page` (optional): Page number (default: 1)
+- `page_size` (optional): Items per page (default: 20, max: 100)
+
+**IMPORTANT:** Only returns posts from channels the user is subscribed to
+
+### 3. Get Single Post
+```http
+GET /api/v1/posts/{post_id}
+x-access-token: <JWT_TOKEN>
+```
+
+### 4. Update Post
+```http
+PUT /api/v1/posts/{post_id}
+Content-Type: application/json
+x-access-token: <JWT_TOKEN>
+
+{
+  "content": "Updated content",
+  "images": ["https://bucket.s3.amazonaws.com/new-image.jpg"]
+}
+```
+
+**Requirements:**
+- Only the post author can update
+
+### 5. Delete Post
+```http
+DELETE /api/v1/posts/{post_id}
+x-access-token: <JWT_TOKEN>
+```
+
+**Requirements:**
+- Only the post author can delete
+
+### 6. Like/Unlike Post
+```http
+PATCH /api/v1/posts/{post_id}/like
+Content-Type: application/json
+x-access-token: <JWT_TOKEN>
+
+{
+  "action": "like"  // or "unlike"
+}
+```
+
+### 7. Pray/Unpray Post
+```http
+PATCH /api/v1/posts/{post_id}/pray
+Content-Type: application/json
+x-access-token: <JWT_TOKEN>
+
+{
+  "action": "pray"  // or "unpray"
+}
+```
+
+### 8. Favorite/Unfavorite Post
+```http
+PATCH /api/v1/posts/{post_id}/favorite
+Content-Type: application/json
+x-access-token: <JWT_TOKEN>
+
+{
+  "action": "favorite"  // or "unfavorite"
+}
+```
+
+### 9. Hide Post
+```http
+POST /api/v1/posts/{post_id}/hide
+x-access-token: <JWT_TOKEN>
+```
+
+### 10. Unhide Post
+```http
+DELETE /api/v1/posts/{post_id}/hide
+x-access-token: <JWT_TOKEN>
+```
+
+### 11. Get Post Statistics
+```http
+GET /api/v1/posts/{post_id}/stats
+x-access-token: <JWT_TOKEN>
+```
+
+### 12. Get User Favorites
+```http
+GET /api/v1/posts/favorites/list?page=1&page_size=20
+x-access-token: <JWT_TOKEN>
+```
+
+### 13. Upload Post Image
+```http
+POST /api/v1/posts/upload-image
+Content-Type: multipart/form-data
+x-access-token: <JWT_TOKEN>
+
+file: <image_file>
+```
+
+### 14. Upload Post Video
+```http
+POST /api/v1/posts/upload-video
+Content-Type: multipart/form-data
+x-access-token: <JWT_TOKEN>
+
+file: <video_file>
+```
+
+### 15. Get Channel Posts
+```http
+GET /api/v1/posts/channel/{channel_id}?page=1&page_size=20
+x-access-token: <JWT_TOKEN>
+```
+
+### 16. Get User Posts
+```http
+GET /api/v1/posts/user/{user_id}?page=1&page_size=20
+x-access-token: <JWT_TOKEN>
+```
+
+### 17. Get Event Posts
+```http
+GET /api/v1/posts/event/{event_id}?page=1&page_size=20
+x-access-token: <JWT_TOKEN>
+```
+
+---
+
 ## 🔧 Testing with cURL
 
 ### Login Example
@@ -440,7 +603,7 @@ All endpoints return errors in this format:
 
 ## 📊 Implementation Status
 
-### ✅ Completed Endpoints: 27/152
+### ✅ Completed Endpoints: 44/152
 
 #### Authentication (15 endpoints) ✅
 - Login, Register (3-step), OTP, Password management, Token operations
@@ -451,8 +614,16 @@ All endpoints return errors in this format:
 #### Organizations (2 endpoints) ✅
 - List organizations, Search parishes
 
+#### Posts (17 endpoints) ✅
+- Create, Read, Update, Delete posts
+- Reactions (like, pray, favorite)
+- Hide/unhide posts
+- Get posts feed (filtered by subscribed channels only)
+- Get channel/user/event posts
+- Upload images/videos
+- Get favorites and statistics
+
 ### 🔄 Pending:
-- Posts (18 endpoints)
 - Channels (28 endpoints)
 - Events (19 endpoints)
 - Comments (4 endpoints)

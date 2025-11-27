@@ -70,7 +70,7 @@ class RegisterResendResponse(BaseModel):
 # OTP
 class SendOTPRequest(BaseModel):
     email: EmailStr
-    method: str = Field(..., regex="^(email|sms)$")
+    method: str = Field(..., pattern="^(email|sms)$")
 
 
 class SendOTPResponse(BaseModel):
