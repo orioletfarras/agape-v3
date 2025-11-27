@@ -45,6 +45,61 @@ async def list_organizations(
     return organizations
 
 
+@router.get("/organizations/{organization_id}", response_model=OrganizationResponse, status_code=status.HTTP_200_OK)
+async def get_organization(
+    organization_id: int,
+    session: AsyncSession = Depends(get_db),
+):
+    """Get organization by ID"""
+    result = await session.execute(
+        select(Organization).where(Organization.id == organization_id)
+    )
+    organization = result.scalar_one_or_none()
+
+    if not organization:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Organization not found")
+
+    return organization
+
+
+@router.get("/parishes", response_model=List[ParishResponse], status_code=status.HTTP_200_OK)
+async def list_parishes(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    session: AsyncSession = Depends(get_db),
+):
+    """
+    List all parishes with pagination
+
+    Returns paginated list of parishes
+    """
+    result = await session.execute(
+        select(Parish).offset(skip).limit(limit)
+    )
+    parishes = result.scalars().all()
+
+    return parishes
+
+
+@router.get("/parishes/{parish_id}", response_model=ParishResponse, status_code=status.HTTP_200_OK)
+async def get_parish(
+    parish_id: int,
+    session: AsyncSession = Depends(get_db),
+):
+    """Get parish by ID"""
+    result = await session.execute(
+        select(Parish).where(Parish.id == parish_id)
+    )
+    parish = result.scalar_one_or_none()
+
+    if not parish:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="Parish not found")
+
+    return parish
+
+
 @router.get("/search-parishes", response_model=dict, status_code=status.HTTP_200_OK)
 async def search_parishes(
     q: str = Query(..., min_length=1, description="Search query"),
@@ -74,3 +129,17 @@ async def search_parishes(
             for p in parishes
         ]
     }
+
+
+@router.get("/organizations/{organization_id}/parishes", response_model=List[ParishResponse], status_code=status.HTTP_200_OK)
+async def get_organization_parishes(
+    organization_id: int,
+    session: AsyncSession = Depends(get_db),
+):
+    """Get all parishes belonging to an organization"""
+    result = await session.execute(
+        select(Parish).where(Parish.organization_id == organization_id)
+    )
+    parishes = result.scalars().all()
+
+    return parishes

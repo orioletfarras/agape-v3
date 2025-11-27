@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from app.api.v1 import auth, profile, organizations, posts, channels, events, comments, social, notifications, messaging, settings
+from app.api.v1 import auth, profile, organizations, posts, channels, events, comments, social, notifications, messaging, settings, admin, search, reactions
 
 router = APIRouter()
 
@@ -15,5 +15,8 @@ router.include_router(social.router)
 router.include_router(notifications.router)
 router.include_router(messaging.router)
 router.include_router(settings.router)
+router.include_router(admin.router)
+router.include_router(search.router)
+router.include_router(reactions.router)
 
 __all__ = ["router"]
