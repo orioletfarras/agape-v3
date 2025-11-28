@@ -3,6 +3,7 @@ from sqlalchemy import Column, Integer, String, DateTime, Text, Boolean, Foreign
 from sqlalchemy.orm import relationship
 
 from app.infrastructure.database.base import Base
+from app.infrastructure.security import generate_id_code
 
 
 class Post(Base):
@@ -11,7 +12,7 @@ class Post(Base):
     __tablename__ = "posts"
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    id_code = Column(String(50), unique=True, nullable=False, index=True)
+    id_code = Column(String(50), unique=True, nullable=False, index=True, default=lambda: generate_id_code("POST"))
 
     # Content
     text = Column(Text, nullable=False)

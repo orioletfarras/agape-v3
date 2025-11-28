@@ -124,23 +124,51 @@ class S3Service:
             logger.error(f"Error processing and uploading image: {e}")
             raise Exception(f"Failed to process image: {str(e)}")
 
-    async def upload_profile_image(self, file_data: bytes) -> str:
-        """Upload profile image"""
+    async def upload_profile_image(self, user_id_code: str, file_data: bytes) -> str:
+        """Upload user profile image to agape/users/<user_id_code>/profile/"""
+        prefix = f"agape/users/{user_id_code}/profile/"
         return await self.upload_image(
             file_data=file_data,
-            prefix=settings.AWS_S3_PROFILE_IMAGES_PREFIX,
+            prefix=prefix,
             max_width=800,
             max_height=800,
             quality=90,
         )
 
     async def upload_post_image(self, user_id: int, file_data: bytes, filename: Optional[str] = None) -> dict:
-        """Upload post image"""
+        """Upload post image - temporarily stored, will be organized when post is created"""
+        import uuid
+        from datetime import datetime
+
+        # Generate unique identifier for this upload session
+        upload_id = f"{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}"
+
+        # Use temporary structure: agape/posts/temp/<upload_id>/
+        temp_prefix = f"agape/posts/temp/{upload_id}/"
+
+        # Get file extension
+        ext = "jpg"
+        if filename:
+            ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else "jpg"
+
+        # Upload with compression (quality=85 for good balance)
         url = await self.upload_image(
             file_data=file_data,
-            prefix=settings.AWS_S3_POST_IMAGES_PREFIX,
+            prefix=temp_prefix,
+            max_width=1920,  # Max 1920px width
+            max_height=1920,  # Max 1920px height
+            quality=85,  # Good quality, reasonable file size
         )
-        return {"url": url, "key": url.split(f"{self.bucket}.s3.{self.region}.amazonaws.com/")[-1]}
+
+        # Extract the S3 key from the URL
+        key = url.split(f"{self.bucket}.s3.{self.region}.amazonaws.com/")[-1]
+
+        return {
+            "url": url,
+            "key": key,
+            "upload_id": upload_id,
+            "temp_path": True
+        }
 
     async def upload_post_video(self, user_id: int, file_data: bytes, filename: Optional[str] = None) -> dict:
         """Upload post video"""
@@ -159,21 +187,98 @@ class S3Service:
         )
         return {"url": url, "key": url.split(f"{self.bucket}.s3.{self.region}.amazonaws.com/")[-1]}
 
-    async def upload_channel_image(self, file_data: bytes) -> str:
-        """Upload channel image"""
+    async def upload_channel_image(self, channel_id_code: str, file_data: bytes) -> str:
+        """Upload channel profile image to agape/channels/<channel_id_code>/profile/"""
+        prefix = f"agape/channels/{channel_id_code}/profile/"
         return await self.upload_image(
             file_data=file_data,
-            prefix=settings.AWS_S3_CHANNEL_IMAGES_PREFIX,
+            prefix=prefix,
             max_width=800,
             max_height=800,
         )
 
-    async def upload_event_image(self, file_data: bytes) -> str:
-        """Upload event image"""
-        return await self.upload_image(
+    async def upload_event_image(self, user_id: int, file_data: bytes, filename: Optional[str] = None) -> dict:
+        """Upload event image - temporarily stored, will be organized when event is created"""
+        import uuid
+        from datetime import datetime
+
+        # Generate unique identifier for this upload session
+        upload_id = f"{datetime.utcnow().strftime('%Y%m%d%H%M%S')}-{uuid.uuid4().hex[:8]}"
+
+        # Use temporary structure: agape/events/temp/<upload_id>/
+        temp_prefix = f"agape/events/temp/{upload_id}/"
+
+        # Get file extension
+        ext = "jpg"
+        if filename:
+            ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else "jpg"
+
+        # Upload with compression
+        url = await self.upload_image(
             file_data=file_data,
-            prefix=settings.AWS_S3_EVENT_IMAGES_PREFIX,
+            prefix=temp_prefix,
+            max_width=1920,  # Max 1920px width
+            max_height=1920,  # Max 1920px height
+            quality=85,  # Good quality, reasonable file size
         )
+
+        # Extract the S3 key from the URL
+        key = url.split(f"{self.bucket}.s3.{self.region}.amazonaws.com/")[-1]
+
+        return {
+            "url": url,
+            "key": key,
+            "upload_id": upload_id,
+            "temp_path": True
+        }
+
+    async def reorganize_post_images(self, post_id_code: str, temp_image_urls: list[str]) -> list[str]:
+        """
+        Reorganize post images from temporary location to final structure
+
+        Args:
+            post_id_code: The post's unique id_code
+            temp_image_urls: List of temporary image URLs
+
+        Returns:
+            list[str]: List of new URLs in final structure
+        """
+        final_urls = []
+
+        for temp_url in temp_image_urls:
+            try:
+                # Extract the temporary key from URL
+                temp_key = temp_url.split(f"{self.bucket}.s3.{self.region}.amazonaws.com/")[-1]
+
+                # Extract filename from temp key (e.g., agape/posts/temp/20250128-abc123/uuid.jpg -> uuid.jpg)
+                filename = temp_key.split("/")[-1]
+
+                # Create final key with structure: agape/posts/<post_id_code>/images/<filename>
+                final_key = f"agape/posts/{post_id_code}/images/{filename}"
+
+                # Copy file to new location
+                self.s3_client.copy_object(
+                    Bucket=self.bucket,
+                    CopySource={'Bucket': self.bucket, 'Key': temp_key},
+                    Key=final_key,
+                    ACL='public-read'
+                )
+
+                # Delete temporary file
+                self.s3_client.delete_object(Bucket=self.bucket, Key=temp_key)
+
+                # Create final URL
+                final_url = f"https://{self.bucket}.s3.{self.region}.amazonaws.com/{final_key}"
+                final_urls.append(final_url)
+
+                logger.info(f"Image reorganized: {temp_key} -> {final_key}")
+
+            except ClientError as e:
+                logger.error(f"Error reorganizing image {temp_url}: {e}")
+                # Keep the temp URL if reorganization fails
+                final_urls.append(temp_url)
+
+        return final_urls
 
     async def delete_file(self, url: str) -> bool:
         """

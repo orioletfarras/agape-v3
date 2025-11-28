@@ -22,10 +22,9 @@ class PostService:
         self,
         user_id: int,
         channel_id: int,
-        content: str,
+        text: str,
         images: Optional[List[str]] = None,
-        videos: Optional[List[str]] = None,
-        event_id: Optional[int] = None
+        video_url: Optional[str] = None
     ) -> PostResponse:
         """
         Create a new post
@@ -36,17 +35,16 @@ class PostService:
         if not can_post:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="You must be subscribed to this channel to post"
+                detail="You must be a channel admin or organization admin to post"
             )
 
         # Create post
         post = await self.repo.create_post(
             channel_id=channel_id,
             author_id=user_id,
-            content=content,
+            text=text,
             images=images,
-            videos=videos,
-            event_id=event_id
+            video_url=video_url
         )
 
         # Return full response
@@ -68,7 +66,7 @@ class PostService:
         user_id: int,
         channel_id: Optional[int] = None,
         author_id: Optional[int] = None,
-        event_id: Optional[int] = None,
+        subscribed_only: bool = True,
         include_hidden: bool = False,
         only_favorites: bool = False,
         page: int = 1,
@@ -76,14 +74,14 @@ class PostService:
     ) -> PostListResponse:
         """
         Get posts feed for user
-        IMPORTANT: Only returns posts from channels the user is subscribed to
+        By default, only returns posts from channels the user is subscribed to
         """
-        # Get posts from subscribed channels
+        # Get posts
         posts, total = await self.repo.get_posts_from_subscribed_channels(
             user_id=user_id,
             channel_id=channel_id,
             author_id=author_id,
-            event_id=event_id,
+            subscribed_only=subscribed_only,
             include_hidden=include_hidden,
             only_favorites=only_favorites,
             page=page,
@@ -111,9 +109,9 @@ class PostService:
         self,
         post_id: int,
         user_id: int,
-        content: Optional[str] = None,
+        text: Optional[str] = None,
         images: Optional[List[str]] = None,
-        videos: Optional[List[str]] = None
+        video_url: Optional[str] = None
     ) -> PostResponse:
         """Update a post (only by author)"""
         # Get post
@@ -134,9 +132,9 @@ class PostService:
         # Update post
         updated_post = await self.repo.update_post(
             post_id=post_id,
-            content=content,
+            text=text,
             images=images,
-            videos=videos
+            video_url=video_url
         )
 
         return await self._build_post_response(updated_post, user_id)
@@ -401,24 +399,13 @@ class PostService:
                 image_url=post.channel.image_url
             )
 
-        # Build event response
-        event = None
-        if post.event:
-            event = PostEventResponse(
-                id=post.event.id,
-                name=post.event.name,
-                event_date=post.event.event_date,
-                location=post.event.location
-            )
-
         return PostResponse(
             id=post.id,
             channel_id=post.channel_id,
             author_id=post.author_id,
-            content=post.content,
+            text=post.text,
             images=post.images,
-            videos=post.videos,
-            event_id=post.event_id,
+            video_url=post.video_url,
             created_at=post.created_at,
             updated_at=post.updated_at,
             likes_count=likes_count,
@@ -430,8 +417,7 @@ class PostService:
             is_favorited=is_favorited,
             is_hidden=is_hidden,
             author=author,
-            channel=channel,
-            event=event
+            channel=channel
         )
 
     # ============================================================

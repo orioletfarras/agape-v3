@@ -9,6 +9,7 @@ from app.infrastructure.database.models import (
     Channel, ChannelSubscription, ChannelAdmin, ChannelSetting,
     HiddenChannel, ChannelAlert, Organization, User, Post, Event
 )
+from app.infrastructure.security import generate_id_code
 
 
 class ChannelRepository:
@@ -25,17 +26,18 @@ class ChannelRepository:
         self,
         name: str,
         organization_id: int,
+        creator_id: int,
         description: Optional[str] = None,
-        image_url: Optional[str] = None,
-        is_private: bool = False
+        image_url: Optional[str] = None
     ) -> Channel:
         """Create a new channel"""
         channel = Channel(
+            id_code=generate_id_code("CH"),
             name=name,
             description=description,
             organization_id=organization_id,
+            creator_id=creator_id,
             image_url=image_url,
-            is_private=is_private,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow()
         )
@@ -57,7 +59,6 @@ class ChannelRepository:
         self,
         user_id: Optional[int] = None,
         organization_id: Optional[int] = None,
-        is_private: Optional[bool] = None,
         subscribed_only: bool = False,
         include_hidden: bool = False,
         search: Optional[str] = None,
@@ -73,10 +74,6 @@ class ChannelRepository:
         # Filter by organization
         if organization_id:
             query = query.where(Channel.organization_id == organization_id)
-
-        # Filter by privacy
-        if is_private is not None:
-            query = query.where(Channel.is_private == is_private)
 
         # Filter subscribed channels only
         if subscribed_only and user_id:
@@ -122,8 +119,7 @@ class ChannelRepository:
         channel_id: int,
         name: Optional[str] = None,
         description: Optional[str] = None,
-        image_url: Optional[str] = None,
-        is_private: Optional[bool] = None
+        image_url: Optional[str] = None
     ) -> Optional[Channel]:
         """Update a channel"""
         channel = await self.get_channel_by_id(channel_id)
@@ -136,8 +132,6 @@ class ChannelRepository:
             channel.description = description
         if image_url is not None:
             channel.image_url = image_url
-        if is_private is not None:
-            channel.is_private = is_private
 
         channel.updated_at = datetime.utcnow()
 
@@ -175,8 +169,7 @@ class ChannelRepository:
 
         subscription = ChannelSubscription(
             user_id=user_id,
-            channel_id=channel_id,
-            subscribed_at=datetime.utcnow()
+            channel_id=channel_id
         )
         self.session.add(subscription)
         await self.session.commit()
@@ -226,7 +219,7 @@ class ChannelRepository:
             select(ChannelSubscription)
             .options(selectinload(ChannelSubscription.user))
             .where(ChannelSubscription.channel_id == channel_id)
-            .order_by(ChannelSubscription.subscribed_at.desc())
+            .order_by(ChannelSubscription.created_at.desc())
             .offset((page - 1) * page_size)
             .limit(page_size)
         )
@@ -256,7 +249,7 @@ class ChannelRepository:
             .join(ChannelSubscription, ChannelSubscription.channel_id == Channel.id)
             .options(selectinload(Channel.organization))
             .where(ChannelSubscription.user_id == user_id)
-            .order_by(ChannelSubscription.subscribed_at.desc())
+            .order_by(ChannelSubscription.created_at.desc())
             .offset((page - 1) * page_size)
             .limit(page_size)
         )
@@ -308,8 +301,29 @@ class ChannelRepository:
         return result.rowcount > 0
 
     async def is_user_admin(self, user_id: int, channel_id: int) -> bool:
-        """Check if user is admin of channel"""
-        result = await self.session.execute(
+        """
+        Check if user is admin of channel.
+        User is admin if:
+        - Is in channel_admins table, OR
+        - Is channel creator, OR
+        - Is organization admin (member of channel's organization via UserOrganization)
+        """
+        from app.infrastructure.database.models import UserOrganization
+
+        # Get channel
+        channel_result = await self.session.execute(
+            select(Channel).where(Channel.id == channel_id)
+        )
+        channel = channel_result.scalar_one_or_none()
+        if not channel:
+            return False
+
+        # Check if user is channel creator
+        if channel.creator_id == user_id:
+            return True
+
+        # Check if user is channel admin
+        admin_result = await self.session.execute(
             select(ChannelAdmin).where(
                 and_(
                     ChannelAdmin.user_id == user_id,
@@ -317,7 +331,23 @@ class ChannelRepository:
                 )
             )
         )
-        return result.scalar_one_or_none() is not None
+        if admin_result.scalar_one_or_none() is not None:
+            return True
+
+        # Check if user is organization admin (if channel has organization)
+        if channel.organization_id:
+            org_result = await self.session.execute(
+                select(UserOrganization).where(
+                    and_(
+                        UserOrganization.user_id == user_id,
+                        UserOrganization.organization_id == channel.organization_id
+                    )
+                )
+            )
+            if org_result.scalar_one_or_none() is not None:
+                return True
+
+        return False
 
     async def get_channel_admins(self, channel_id: int) -> List[ChannelAdmin]:
         """Get all admins of a channel"""

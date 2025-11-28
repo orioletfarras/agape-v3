@@ -60,7 +60,6 @@ class ChannelResponse(BaseModel):
     description: Optional[str] = None
     organization_id: int
     image_url: Optional[str] = None
-    is_private: bool
     created_at: datetime
     updated_at: datetime
 

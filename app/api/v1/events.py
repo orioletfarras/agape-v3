@@ -59,22 +59,32 @@ async def create_event(
 
 @router.get("", response_model=EventListResponse, status_code=status.HTTP_200_OK)
 async def get_events(
-    channel_id: Optional[int] = Query(None),
-    upcoming_only: bool = Query(True),
-    registered_only: bool = Query(False),
-    search: Optional[str] = Query(None),
-    page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    channel_id: Optional[int] = Query(None, description="Filter by channel"),
+    subscribed_only: bool = Query(True, description="Only show events from subscribed channels"),
+    upcoming_only: bool = Query(True, description="Only show upcoming events"),
+    registered_only: bool = Query(False, description="Only show events user registered for"),
+    search: Optional[str] = Query(None, description="Search in name, description, or location"),
+    page: int = Query(1, ge=1, description="Page number"),
+    page_size: int = Query(20, ge=1, le=100, description="Items per page"),
     current_user: User = Depends(get_current_user),
     event_service: EventService = Depends(get_event_service)
 ):
     """
-    Get events feed
-    IMPORTANT: Only shows events from subscribed channels
+    Get events feed for authenticated user
+
+    **Filters:**
+    - channel_id: Show events from specific channel
+    - subscribed_only: Only show events from subscribed channels (default: true)
+    - upcoming_only: Only show upcoming events (default: true)
+    - registered_only: Only show events user registered for
+    - search: Search in event name, description, or location
+    - page: Pagination page number
+    - page_size: Number of events per page (max 100)
     """
     return await event_service.get_events(
         user_id=current_user.id,
         channel_id=channel_id,
+        subscribed_only=subscribed_only,
         upcoming_only=upcoming_only,
         registered_only=registered_only,
         search=search,
@@ -275,10 +285,17 @@ async def upload_event_image(
 ):
     """Upload event image"""
     s3_service = S3Service()
-    file_data = await file.read()
-    url = await s3_service.upload_event_image(file_data)
 
-    return {"success": True, "image_url": url}
+    # Read file data
+    file_data = await file.read()
+
+    # Upload to S3
+    result = await s3_service.upload_event_image(current_user.id, file_data, file.filename)
+
+    return {
+        "success": True,
+        "image_url": result["url"]
+    }
 
 
 # ============================================================

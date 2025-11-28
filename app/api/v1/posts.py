@@ -48,10 +48,9 @@ async def create_post(
     return await post_service.create_post(
         user_id=current_user.id,
         channel_id=data.channel_id,
-        content=data.content,
+        text=data.text,
         images=data.images,
-        videos=data.videos,
-        event_id=data.event_id
+        video_url=data.video_url
     )
 
 
@@ -59,7 +58,7 @@ async def create_post(
 async def get_posts_feed(
     channel_id: Optional[int] = Query(None, description="Filter by channel"),
     author_id: Optional[int] = Query(None, description="Filter by author"),
-    event_id: Optional[int] = Query(None, description="Filter by event"),
+    subscribed_only: bool = Query(True, description="Only show posts from subscribed channels"),
     include_hidden: bool = Query(False, description="Include hidden posts"),
     only_favorites: bool = Query(False, description="Only show favorite posts"),
     page: int = Query(1, ge=1, description="Page number"),
@@ -70,12 +69,10 @@ async def get_posts_feed(
     """
     Get posts feed for authenticated user
 
-    **IMPORTANT:** Only returns posts from channels the user is subscribed to
-
     **Filters:**
     - channel_id: Show posts from specific channel
     - author_id: Show posts from specific user
-    - event_id: Show posts related to specific event
+    - subscribed_only: Only show posts from subscribed channels (default: true)
     - include_hidden: Include posts the user has hidden
     - only_favorites: Only show favorited posts
     - page: Pagination page number
@@ -85,7 +82,7 @@ async def get_posts_feed(
         user_id=current_user.id,
         channel_id=channel_id,
         author_id=author_id,
-        event_id=event_id,
+        subscribed_only=subscribed_only,
         include_hidden=include_hidden,
         only_favorites=only_favorites,
         page=page,
@@ -131,9 +128,9 @@ async def update_post(
     return await post_service.update_post(
         post_id=post_id,
         user_id=current_user.id,
-        content=data.content,
+        text=data.text,
         images=data.images,
-        videos=data.videos
+        video_url=data.video_url
     )
 
 

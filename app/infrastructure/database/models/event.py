@@ -13,11 +13,11 @@ class Event(Base):
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
 
     # Basic info
-    title = Column(String(255), nullable=False, index=True)
+    name = Column(String(255), nullable=False, index=True)
     description = Column(Text, nullable=True)
 
     # Dates
-    start_date = Column(DateTime, nullable=False, index=True)
+    event_date = Column(DateTime, nullable=False, index=True)
     end_date = Column(DateTime, nullable=True)
 
     # Location
@@ -52,12 +52,12 @@ class Event(Base):
     alerts = relationship("EventAlert", back_populates="event", cascade="all, delete-orphan")
 
     __table_args__ = (
-        Index("idx_event_channel_date", "channel_id", "start_date"),
-        Index("idx_event_dates", "start_date", "end_date"),
+        Index("idx_event_channel_date", "channel_id", "event_date"),
+        Index("idx_event_dates", "event_date", "end_date"),
     )
 
     def __repr__(self):
-        return f"<Event(id={self.id}, title={self.title})>"
+        return f"<Event(id={self.id}, name={self.name})>"
 
 
 class EventRegistration(Base):

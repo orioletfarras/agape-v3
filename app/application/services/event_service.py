@@ -95,6 +95,7 @@ class EventService:
         self,
         user_id: int,
         channel_id: Optional[int] = None,
+        subscribed_only: bool = True,
         upcoming_only: bool = True,
         registered_only: bool = False,
         search: Optional[str] = None,
@@ -103,11 +104,12 @@ class EventService:
     ) -> EventListResponse:
         """
         Get events feed for user
-        IMPORTANT: Only returns events from channels the user is subscribed to
+        By default, only returns events from channels the user is subscribed to
         """
         events, total = await self.repo.get_events_from_subscribed_channels(
             user_id=user_id,
             channel_id=channel_id,
+            subscribed_only=subscribed_only,
             upcoming_only=upcoming_only,
             registered_only=registered_only,
             search=search,
@@ -684,11 +686,11 @@ class EventService:
             end_date=event.end_date,
             location=event.location,
             image_url=event.image_url,
-            max_attendees=event.max_attendees,
-            registration_deadline=event.registration_deadline,
-            requires_payment=event.requires_payment,
-            price=event.price,
-            currency=event.currency,
+            max_attendees=event.goal_attendees,
+            registration_deadline=None,  # Field doesn't exist in model
+            requires_payment=bool(event.event_price),  # Inferred from price
+            price=event.event_price,
+            currency="EUR",  # Default currency
             created_at=event.created_at,
             updated_at=event.updated_at,
             registered_count=registered_count,

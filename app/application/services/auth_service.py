@@ -84,7 +84,7 @@ class AuthService:
         refresh_token_record = RefreshToken(
             user_id=user.id,
             token=tokens["refresh_token"],
-            expires_at=datetime.utcnow() + get_registration_expiry_time(),
+            expires_at=get_registration_expiry_time(),
         )
         self.session.add(refresh_token_record)
         await self.session.commit()
@@ -475,3 +475,36 @@ class AuthService:
         await self.session.commit()
 
         return {"success": True}
+
+    async def get_latest_otp(self, email: str) -> Optional[Dict[str, Any]]:
+        """
+        Get latest OTP code for an email (admin/testing only)
+
+        Args:
+            email: User email to get OTP for
+
+        Returns:
+            dict: OTP code and expiry information or None
+        """
+        # Get latest unused OTP
+        result = await self.session.execute(
+            select(OTPCode)
+            .where(OTPCode.email == email)
+            .where(OTPCode.is_used == False)
+            .order_by(OTPCode.created_at.desc())
+            .limit(1)
+        )
+        otp = result.scalar_one_or_none()
+
+        if not otp:
+            return None
+
+        return {
+            "email": otp.email,
+            "code": otp.code,
+            "purpose": otp.purpose,
+            "method": otp.method,
+            "expires_at": otp.expires_at.isoformat(),
+            "is_expired": is_expired(otp.expires_at),
+            "created_at": otp.created_at.isoformat()
+        }

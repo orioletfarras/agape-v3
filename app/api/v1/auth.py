@@ -360,3 +360,53 @@ async def register_user_organization(
         current_user.id,
         data.organization_id,
     )
+
+
+@router.post("/admin/get-otp", status_code=status.HTTP_200_OK)
+async def get_latest_otp_for_user(
+    email: str,
+    current_user: User = Depends(get_current_user),
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    """
+    Get latest OTP code for a user (Admin/Testing only)
+
+    **IMPORTANT**: This endpoint is for testing and admin purposes only.
+    It should be disabled or properly secured in production.
+
+    **Requirements:**
+    - Must be authenticated
+    - User must be superadmin (TODO: add validation)
+
+    **Request body:**
+    ```json
+    {
+      "email": "user@example.com"
+    }
+    ```
+
+    **Response:**
+    ```json
+    {
+      "email": "user@example.com",
+      "code": "123456",
+      "purpose": "register",
+      "method": "email",
+      "expires_at": "2025-01-15T10:30:00",
+      "is_expired": false,
+      "created_at": "2025-01-15T10:20:00"
+    }
+    ```
+    """
+    # TODO: Add superadmin validation here
+    # For now, any authenticated user can call this endpoint
+
+    result = await auth_service.get_latest_otp(email)
+
+    if not result:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No OTP found for email: {email}",
+        )
+
+    return result

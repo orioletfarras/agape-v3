@@ -141,7 +141,15 @@ def get_user_id_from_token(token: str) -> Optional[int]:
     if not payload:
         return None
 
-    return payload.get("sub")
+    # Convert sub from string to int
+    sub = payload.get("sub")
+    if sub:
+        try:
+            return int(sub)
+        except (ValueError, TypeError):
+            logger.error(f"Invalid user ID in token: {sub}")
+            return None
+    return None
 
 
 def create_token_pair(user_id: int, additional_data: Optional[Dict[str, Any]] = None) -> Dict[str, str]:
@@ -155,7 +163,8 @@ def create_token_pair(user_id: int, additional_data: Optional[Dict[str, Any]] = 
     Returns:
         dict: Dictionary with access_token and refresh_token
     """
-    token_data = {"sub": user_id}
+    # Convert user_id to string as JWT requires sub to be a string
+    token_data = {"sub": str(user_id)}
 
     if additional_data:
         token_data.update(additional_data)

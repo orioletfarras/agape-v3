@@ -11,17 +11,16 @@ from pydantic import BaseModel, Field, ConfigDict
 class CreatePostRequest(BaseModel):
     """Request to create a new post"""
     channel_id: int = Field(..., description="Channel where the post will be created")
-    content: str = Field(..., min_length=1, max_length=10000, description="Post content")
+    text: str = Field(..., min_length=1, max_length=10000, description="Post content")
     images: Optional[List[str]] = Field(None, description="List of image URLs")
-    videos: Optional[List[str]] = Field(None, description="List of video URLs")
-    event_id: Optional[int] = Field(None, description="Related event ID if applicable")
+    video_url: Optional[str] = Field(None, description="Video URL")
 
 
 class UpdatePostRequest(BaseModel):
     """Request to update a post"""
-    content: Optional[str] = Field(None, min_length=1, max_length=10000)
+    text: Optional[str] = Field(None, min_length=1, max_length=10000)
     images: Optional[List[str]] = None
-    videos: Optional[List[str]] = None
+    video_url: Optional[str] = None
 
 
 class PostReactionRequest(BaseModel):
@@ -68,10 +67,9 @@ class PostResponse(BaseModel):
     id: int
     channel_id: int
     author_id: int
-    content: str
+    text: str
     images: Optional[List[str]] = None
-    videos: Optional[List[str]] = None
-    event_id: Optional[int] = None
+    video_url: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -90,7 +88,6 @@ class PostResponse(BaseModel):
     # Related data
     author: Optional[PostAuthorResponse] = None
     channel: Optional[PostChannelResponse] = None
-    event: Optional[PostEventResponse] = None
 
     model_config = ConfigDict(from_attributes=True)
 

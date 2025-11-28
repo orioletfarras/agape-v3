@@ -21,25 +21,33 @@ class PostRepository:
         self,
         channel_id: int,
         author_id: int,
-        content: str,
+        text: str,
         images: Optional[List[str]] = None,
-        videos: Optional[List[str]] = None,
-        event_id: Optional[int] = None
+        video_url: Optional[str] = None
     ) -> Post:
         """Create a new post"""
+        from app.infrastructure.aws.s3_service import s3_service
+
         post = Post(
             channel_id=channel_id,
             author_id=author_id,
-            content=content,
+            text=text,
             images=images,
-            videos=videos,
-            event_id=event_id,
+            video_url=video_url,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow()
         )
         self.session.add(post)
         await self.session.commit()
-        await self.session.refresh(post)
+        await self.session.refresh(post, ['author', 'channel'])
+
+        # Reorganize images from temp location to final structure if images exist
+        if images and len(images) > 0:
+            final_image_urls = await s3_service.reorganize_post_images(post.id_code, images)
+            post.images = final_image_urls
+            await self.session.commit()
+            await self.session.refresh(post, ['author', 'channel'])
+
         return post
 
     async def get_post_by_id(self, post_id: int) -> Optional[Post]:
@@ -48,8 +56,7 @@ class PostRepository:
             select(Post)
             .options(
                 selectinload(Post.author),
-                selectinload(Post.channel),
-                selectinload(Post.event)
+                selectinload(Post.channel)
             )
             .where(Post.id == post_id)
         )
@@ -60,27 +67,28 @@ class PostRepository:
         user_id: int,
         channel_id: Optional[int] = None,
         author_id: Optional[int] = None,
-        event_id: Optional[int] = None,
+        subscribed_only: bool = True,
         include_hidden: bool = False,
         only_favorites: bool = False,
         page: int = 1,
         page_size: int = 20
     ) -> Tuple[List[Post], int]:
         """
-        Get posts from channels the user is subscribed to
+        Get posts feed for user
         Returns (posts, total_count)
         """
-        # Base query: posts from subscribed channels
-        query = (
-            select(Post)
-            .join(ChannelSubscription, ChannelSubscription.channel_id == Post.channel_id)
-            .where(ChannelSubscription.user_id == user_id)
-            .options(
-                selectinload(Post.author),
-                selectinload(Post.channel),
-                selectinload(Post.event)
-            )
+        # Base query
+        query = select(Post).options(
+            selectinload(Post.author),
+            selectinload(Post.channel)
         )
+
+        # Filter by subscribed channels only
+        if subscribed_only:
+            query = query.join(
+                ChannelSubscription,
+                ChannelSubscription.channel_id == Post.channel_id
+            ).where(ChannelSubscription.user_id == user_id)
 
         # Apply filters
         if channel_id:
@@ -88,9 +96,6 @@ class PostRepository:
 
         if author_id:
             query = query.where(Post.author_id == author_id)
-
-        if event_id:
-            query = query.where(Post.event_id == event_id)
 
         # Filter hidden posts
         if not include_hidden:
@@ -124,21 +129,21 @@ class PostRepository:
     async def update_post(
         self,
         post_id: int,
-        content: Optional[str] = None,
+        text: Optional[str] = None,
         images: Optional[List[str]] = None,
-        videos: Optional[List[str]] = None
+        video_url: Optional[str] = None
     ) -> Optional[Post]:
         """Update a post"""
         post = await self.get_post_by_id(post_id)
         if not post:
             return None
 
-        if content is not None:
-            post.content = content
+        if text is not None:
+            post.text = text
         if images is not None:
             post.images = images
-        if videos is not None:
-            post.videos = videos
+        if video_url is not None:
+            post.video_url = video_url
 
         post.updated_at = datetime.utcnow()
 
@@ -342,8 +347,7 @@ class PostRepository:
             .where(PostFavorite.user_id == user_id)
             .options(
                 selectinload(Post.author),
-                selectinload(Post.channel),
-                selectinload(Post.event)
+                selectinload(Post.channel)
             )
             .order_by(PostFavorite.created_at.desc())
             .offset((page - 1) * page_size)
@@ -356,16 +360,55 @@ class PostRepository:
         return list(posts), total
 
     async def check_user_can_post_in_channel(self, user_id: int, channel_id: int) -> bool:
-        """Check if user is subscribed to the channel"""
-        result = await self.session.execute(
-            select(ChannelSubscription).where(
+        """
+        Check if user can post in channel.
+        User must be:
+        - Channel admin (in channel_admins table), OR
+        - Channel creator, OR
+        - Organization admin (has UserOrganization with is_admin=True for the channel's organization)
+        """
+        from app.infrastructure.database.models import ChannelAdmin, UserOrganization, Organization
+
+        # Get channel to check creator_id and organization_id
+        channel_result = await self.session.execute(
+            select(Channel).where(Channel.id == channel_id)
+        )
+        channel = channel_result.scalar_one_or_none()
+        if not channel:
+            return False
+
+        # Check if user is channel creator
+        if channel.creator_id == user_id:
+            return True
+
+        # Check if user is channel admin
+        admin_result = await self.session.execute(
+            select(ChannelAdmin).where(
                 and_(
-                    ChannelSubscription.user_id == user_id,
-                    ChannelSubscription.channel_id == channel_id
+                    ChannelAdmin.user_id == user_id,
+                    ChannelAdmin.channel_id == channel_id
                 )
             )
         )
-        return result.scalar_one_or_none() is not None
+        if admin_result.scalar_one_or_none() is not None:
+            return True
+
+        # Check if user is organization admin (if channel has organization)
+        if channel.organization_id:
+            # For now, we'll check if user is member of the organization
+            # TODO: Add is_admin field to UserOrganization table
+            org_result = await self.session.execute(
+                select(UserOrganization).where(
+                    and_(
+                        UserOrganization.user_id == user_id,
+                        UserOrganization.organization_id == channel.organization_id
+                    )
+                )
+            )
+            if org_result.scalar_one_or_none() is not None:
+                return True
+
+        return False
 
     # ============================================================
     # POST MODERATION OPERATIONS

@@ -46,17 +46,14 @@ class EventRepository:
             end_date=end_date,
             location=location,
             image_url=image_url,
-            max_attendees=max_attendees,
-            registration_deadline=registration_deadline,
-            requires_payment=requires_payment,
-            price=price,
-            currency=currency,
+            goal_attendees=max_attendees,
+            event_price=price,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow()
         )
         self.session.add(event)
         await self.session.commit()
-        await self.session.refresh(event)
+        await self.session.refresh(event, ["channel"])
         return event
 
     async def get_event_by_id(self, event_id: int) -> Optional[Event]:
@@ -72,6 +69,7 @@ class EventRepository:
         self,
         user_id: int,
         channel_id: Optional[int] = None,
+        subscribed_only: bool = True,
         upcoming_only: bool = True,
         registered_only: bool = False,
         search: Optional[str] = None,
@@ -79,16 +77,18 @@ class EventRepository:
         page_size: int = 20
     ) -> Tuple[List[Event], int]:
         """
-        Get events from channels user is subscribed to
+        Get events feed for user
         Returns (events, total_count)
         """
-        # Base query: events from subscribed channels
-        query = (
-            select(Event)
-            .join(ChannelSubscription, ChannelSubscription.channel_id == Event.channel_id)
-            .where(ChannelSubscription.user_id == user_id)
-            .options(selectinload(Event.channel))
-        )
+        # Base query
+        query = select(Event).options(selectinload(Event.channel))
+
+        # Filter by subscribed channels only
+        if subscribed_only:
+            query = query.join(
+                ChannelSubscription,
+                ChannelSubscription.channel_id == Event.channel_id
+            ).where(ChannelSubscription.user_id == user_id)
 
         # Filter by channel
         if channel_id:

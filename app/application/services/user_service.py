@@ -39,13 +39,7 @@ class UserService:
                 detail="File must be an image",
             )
 
-        # Read file data
-        file_data = await file.read()
-
-        # Upload to S3
-        image_url = await s3_service.upload_profile_image(file_data)
-
-        # Get user
+        # Get user first to get id_code
         result = await self.session.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
 
@@ -54,6 +48,12 @@ class UserService:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="User not found",
             )
+
+        # Read file data
+        file_data = await file.read()
+
+        # Upload to S3 with user_id (convert to string for S3 path)
+        image_url = await s3_service.upload_profile_image(str(user.id), file_data)
 
         # Delete old image if exists
         if user.profile_image_url:

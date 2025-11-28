@@ -30,16 +30,33 @@ class ChannelService:
         name: str,
         organization_id: int,
         description: Optional[str] = None,
-        image_url: Optional[str] = None,
-        is_private: bool = False
+        image_url: Optional[str] = None
     ) -> ChannelResponse:
-        """Create a new channel"""
+        """Create a new channel (organization admin only)"""
+        # Check if user is organization admin
+        from app.infrastructure.database.models import UserOrganization
+        from sqlalchemy import select, and_
+
+        org_result = await self.session.execute(
+            select(UserOrganization).where(
+                and_(
+                    UserOrganization.user_id == user_id,
+                    UserOrganization.organization_id == organization_id
+                )
+            )
+        )
+        if org_result.scalar_one_or_none() is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only organization admins can create channels"
+            )
+
         channel = await self.repo.create_channel(
             name=name,
             organization_id=organization_id,
+            creator_id=user_id,
             description=description,
-            image_url=image_url,
-            is_private=is_private
+            image_url=image_url
         )
 
         # Creator becomes admin automatically
@@ -65,7 +82,6 @@ class ChannelService:
         self,
         user_id: int,
         organization_id: Optional[int] = None,
-        is_private: Optional[bool] = None,
         subscribed_only: bool = False,
         include_hidden: bool = False,
         search: Optional[str] = None,
@@ -76,7 +92,6 @@ class ChannelService:
         channels, total = await self.repo.get_channels(
             user_id=user_id,
             organization_id=organization_id,
-            is_private=is_private,
             subscribed_only=subscribed_only,
             include_hidden=include_hidden,
             search=search,
@@ -107,8 +122,7 @@ class ChannelService:
         user_id: int,
         name: Optional[str] = None,
         description: Optional[str] = None,
-        image_url: Optional[str] = None,
-        is_private: Optional[bool] = None
+        image_url: Optional[str] = None
     ) -> ChannelResponse:
         """Update a channel (admin only)"""
         # Check if user is admin
@@ -124,8 +138,7 @@ class ChannelService:
             channel_id=channel_id,
             name=name,
             description=description,
-            image_url=image_url,
-            is_private=is_private
+            image_url=image_url
         )
 
         if not updated_channel:
@@ -252,7 +265,7 @@ class ChannelService:
                     channel_id=sub.channel_id,
                     user_id=sub.user_id,
                     user=user_data,
-                    subscribed_at=sub.subscribed_at
+                    subscribed_at=sub.created_at
                 )
             )
 
@@ -585,7 +598,6 @@ class ChannelService:
             description=channel.description,
             organization_id=channel.organization_id,
             image_url=channel.image_url,
-            is_private=channel.is_private,
             created_at=channel.created_at,
             updated_at=channel.updated_at,
             subscribers_count=subscribers_count,

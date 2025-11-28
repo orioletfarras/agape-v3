@@ -61,16 +61,14 @@ async def create_channel(
         name=data.name,
         organization_id=data.organization_id,
         description=data.description,
-        image_url=data.image_url,
-        is_private=data.is_private
+        image_url=data.image_url
     )
 
 
 @router.get("", response_model=ChannelListResponse, status_code=status.HTTP_200_OK)
 async def get_channels(
     organization_id: Optional[int] = Query(None, description="Filter by organization"),
-    is_private: Optional[bool] = Query(None, description="Filter by privacy"),
-    subscribed_only: bool = Query(False, description="Only show subscribed channels"),
+    subscribed_only: bool = Query(True, description="Only show subscribed channels"),
     include_hidden: bool = Query(False, description="Include hidden channels"),
     search: Optional[str] = Query(None, description="Search in name/description"),
     page: int = Query(1, ge=1, description="Page number"),
@@ -83,7 +81,6 @@ async def get_channels(
 
     **Filters:**
     - organization_id: Filter by organization
-    - is_private: Filter by privacy (true/false)
     - subscribed_only: Only show channels user is subscribed to
     - include_hidden: Include channels user has hidden
     - search: Search in channel name or description
@@ -93,7 +90,6 @@ async def get_channels(
     return await channel_service.get_channels(
         user_id=current_user.id,
         organization_id=organization_id,
-        is_private=is_private,
         subscribed_only=subscribed_only,
         include_hidden=include_hidden,
         search=search,
