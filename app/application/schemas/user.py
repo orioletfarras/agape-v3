@@ -14,6 +14,7 @@ class UserProfileResponse(BaseModel):
     profile_image_url: Optional[str]
     bio: Optional[str]
     onboarding_completed: bool
+    role: Optional[str]
     created_at: datetime
 
     class Config:

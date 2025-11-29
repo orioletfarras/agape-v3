@@ -68,7 +68,7 @@ async def create_channel(
 @router.get("", response_model=ChannelListResponse, status_code=status.HTTP_200_OK)
 async def get_channels(
     organization_id: Optional[int] = Query(None, description="Filter by organization"),
-    subscribed_only: bool = Query(False, description="Only show subscribed channels"),
+    subscribed_only: bool = Query(True, description="Only show subscribed channels"),
     include_hidden: bool = Query(False, description="Include hidden channels"),
     search: Optional[str] = Query(None, description="Search in name/description"),
     page: int = Query(1, ge=1, description="Page number"),
@@ -87,10 +87,6 @@ async def get_channels(
     - page: Pagination page number
     - page_size: Number of channels per page (max 100)
     """
-    # Auto-select primary organization if not specified
-    if organization_id is None and current_user.primary_organization_id:
-        organization_id = current_user.primary_organization_id
-    
     return await channel_service.get_channels(
         user_id=current_user.id,
         organization_id=organization_id,
@@ -483,10 +479,6 @@ async def get_organization_channels(
 
     Returns paginated list of channels from the organization
     """
-    # Auto-select primary organization if not specified
-    if organization_id is None and current_user.primary_organization_id:
-        organization_id = current_user.primary_organization_id
-    
     return await channel_service.get_channels(
         user_id=current_user.id,
         organization_id=organization_id,
@@ -512,10 +504,6 @@ async def search_channels(
 
     Searches in both channel name and description fields
     """
-    # Auto-select primary organization if not specified
-    if organization_id is None and current_user.primary_organization_id:
-        organization_id = current_user.primary_organization_id
-    
     return await channel_service.get_channels(
         user_id=current_user.id,
         search=query,

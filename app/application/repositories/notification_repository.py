@@ -63,13 +63,13 @@ class NotificationRepository:
     ) -> Tuple[List[Notification], int]:
         """Get user's notifications with pagination"""
         # Build query
-        query = select(Notification).where(Notification.user_id == user_id)
+        query = select(Notification).where(Notification.receiver_id == user_id)
 
         if unread_only:
             query = query.where(Notification.is_read == False)
 
         # Count total
-        count_query = select(func.count(Notification.id)).where(Notification.user_id == user_id)
+        count_query = select(func.count(Notification.id)).where(Notification.receiver_id == user_id)
         if unread_only:
             count_query = count_query.where(Notification.is_read == False)
 
@@ -95,7 +95,7 @@ class NotificationRepository:
             select(func.count(Notification.id))
             .where(
                 and_(
-                    Notification.user_id == user_id,
+                    Notification.receiver_id == user_id,
                     Notification.is_read == False
                 )
             )
@@ -107,7 +107,7 @@ class NotificationRepository:
         # Total count
         total_result = await self.session.execute(
             select(func.count(Notification.id))
-            .where(Notification.user_id == user_id)
+            .where(Notification.receiver_id == user_id)
         )
         total = total_result.scalar() or 0
 
@@ -116,7 +116,7 @@ class NotificationRepository:
             select(func.count(Notification.id))
             .where(
                 and_(
-                    Notification.user_id == user_id,
+                    Notification.receiver_id == user_id,
                     Notification.is_read == False
                 )
             )
@@ -149,7 +149,7 @@ class NotificationRepository:
             update(Notification)
             .where(
                 and_(
-                    Notification.user_id == user_id,
+                    Notification.receiver_id == user_id,
                     Notification.is_read == False
                 )
             )
@@ -173,7 +173,7 @@ class NotificationRepository:
     async def delete_all_notifications(self, user_id: int) -> int:
         """Delete all user notifications"""
         result = await self.session.execute(
-            delete(Notification).where(Notification.user_id == user_id)
+            delete(Notification).where(Notification.receiver_id == user_id)
         )
         await self.session.commit()
         return result.rowcount

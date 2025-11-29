@@ -113,14 +113,16 @@ async def update_user_setting(
 @router.post("/check-nickname", response_model=CheckNicknameResponse, status_code=status.HTTP_200_OK)
 async def check_nickname(
     data: CheckNicknameRequest,
+    current_user: User = Depends(get_current_user),
     user_service: UserService = Depends(get_user_service),
 ):
     """
     Check if nickname is available
 
     Returns availability status
+    Allows user to use their own current nickname
     """
-    return await user_service.check_nickname(data.nickname)
+    return await user_service.check_nickname(data.nickname, current_user.id)
 
 
 @router.post("/complete-profile", response_model=CompleteProfileResponse, status_code=status.HTTP_200_OK)

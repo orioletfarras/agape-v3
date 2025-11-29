@@ -87,6 +87,9 @@ from app.infrastructure.database.models.prayer_life import (
     PrayerLifeWebAccess,
 )
 
+# Translation models
+from app.infrastructure.database.models.translation import Translation
+
 # Donation models
 from app.infrastructure.database.models.donation import (
     Donation,
@@ -94,6 +97,8 @@ from app.infrastructure.database.models.donation import (
 )
 
 __all__ = [
+    # Translation
+    "Translation",
     # User
     "User",
     # Organization

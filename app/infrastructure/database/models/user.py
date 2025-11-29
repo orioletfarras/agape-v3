@@ -37,6 +37,7 @@ class User(Base):
     is_active = Column(Boolean, default=True, nullable=False)
     is_verified = Column(Boolean, default=False, nullable=False)
     onboarding_completed = Column(Boolean, default=False, nullable=False)
+    role = Column(String(50), nullable=True, server_default="user")
 
     # Organization & Parish
     primary_organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=True)

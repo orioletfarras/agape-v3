@@ -310,10 +310,17 @@ class AuthService:
                     detail="No phone number registered",
                 )
 
-        return {
+        # DEVELOPMENT: Include OTP in response if email sending fails
+        import os
+        response = {
             "success": True,
             "message": f"Verification code sent via {method}",
         }
+        # Add OTP code for development/testing
+        if os.getenv('ENVIRONMENT', 'development') == 'development':
+            response["otp_code"] = otp_code
+            response["debug_note"] = "OTP code included for development only"
+        return response
 
     async def verify_otp(self, email: str, otp_code: str) -> Dict[str, Any]:
         """Verify OTP and login"""

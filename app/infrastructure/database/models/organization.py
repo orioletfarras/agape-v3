@@ -23,6 +23,7 @@ class Organization(Base):
     members = relationship("User", back_populates="primary_organization", foreign_keys="User.primary_organization_id")
     user_organizations = relationship("UserOrganization", back_populates="organization", cascade="all, delete-orphan")
     channels = relationship("Channel", back_populates="organization")
+    parishes = relationship("Parish", back_populates="organization")
 
     __table_args__ = (
         Index("idx_organization_name", "name"),
@@ -42,6 +43,9 @@ class Parish(Base):
     address = Column(String(500), nullable=True)
     latitude = Column(String(50), nullable=True)
     longitude = Column(String(50), nullable=True)
+    
+    # Organization relationship
+    organization_id = Column(Integer, ForeignKey("organizations.id"), nullable=True, index=True)
 
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
@@ -49,6 +53,7 @@ class Parish(Base):
 
     # Relationships
     members = relationship("User", back_populates="parish")
+    organization = relationship("Organization", back_populates="parishes")
 
     __table_args__ = (
         Index("idx_parish_name", "name"),
