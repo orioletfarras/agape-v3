@@ -79,6 +79,7 @@ class ChannelResponse(BaseModel):
 class ChannelDetailResponse(ChannelResponse):
     """Detailed channel response with organization info"""
     organization: Optional["OrganizationResponse"] = None
+    monthly_donation: float = 0
 
 
 class OrganizationResponse(BaseModel):

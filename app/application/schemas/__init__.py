@@ -1,5 +1,5 @@
 # Auth schemas
-from app.application.schemas.auth import (
+from app.domain.schemas.auth import (
     LoginRequest,
     LoginResponse,
     RegisterStartRequest,
@@ -31,7 +31,7 @@ from app.application.schemas.auth import (
 )
 
 # User schemas
-from app.application.schemas.user import (
+from app.domain.schemas.user import (
     UserProfileResponse,
     UpdatePersonalInfoRequest,
     UpdatePersonalInfoResponse,

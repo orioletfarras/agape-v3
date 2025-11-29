@@ -34,18 +34,9 @@ class ChannelService:
     ) -> ChannelResponse:
         """Create a new channel (organization admin only)"""
         # Check if user is organization admin
-        from app.infrastructure.database.models import UserOrganization
-        from sqlalchemy import select, and_
-
-        org_result = await self.session.execute(
-            select(UserOrganization).where(
-                and_(
-                    UserOrganization.user_id == user_id,
-                    UserOrganization.organization_id == organization_id
-                )
-            )
-        )
-        if org_result.scalar_one_or_none() is None:
+        from app.application.repositories.organization_repository import OrganizationRepository
+        org_repo = OrganizationRepository(self.session)
+        if not await org_repo.is_user_org_admin(user_id, organization_id):
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Only organization admins can create channels"
@@ -626,7 +617,14 @@ class ChannelService:
                 image_url=channel.organization.image_url
             )
 
+        # Get monthly donation amount
+        from app.application.repositories.donation_repository import DonationRepository
+        donation_repo = DonationRepository(self.session)
+        donation = await donation_repo.get_user_donation_to_channel(user_id, channel.id)
+        monthly_donation = float(donation.amount) if donation else 0.0
+
         return ChannelDetailResponse(
             **basic_response.model_dump(),
-            organization=organization
+            organization=organization,
+            monthly_donation=monthly_donation
         )

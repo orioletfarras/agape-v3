@@ -182,7 +182,7 @@ class UserService:
         self,
         user_id: int,
         nickname: str,
-        parish_id: Optional[int] = None,
+        organization_id: Optional[int] = None,
     ) -> Dict[str, Any]:
         """Complete user profile (onboarding)"""
         # Check if username is available (but allow user to keep their own username)
@@ -212,68 +212,50 @@ class UserService:
 
         # Update user
         user.username = nickname
-        
-        # Handle parish and organization
-        if parish_id:
-            user.parish_id = parish_id
-            
-            # Get parish
-            result = await self.session.execute(select(Parish).where(Parish.id == parish_id))
-            parish = result.scalar_one_or_none()
-            
-            if parish:
-                organization_id = None
-                
-                # Check if parish has organization linked
-                if not parish.organization_id:
-                    # Create organization for this parish
-                    logger.info(f"Creating organization for parish {parish.name}")
-                    new_org = Organization(
-                        name=parish.name,
-                        description=f"Organización de {parish.name}",
-                        created_at=datetime.utcnow(),
-                        updated_at=datetime.utcnow()
-                    )
-                    self.session.add(new_org)
-                    await self.session.flush()  # Get the ID
-                    
-                    # Link parish to organization
-                    parish.organization_id = new_org.id
-                    organization_id = new_org.id
-                    logger.info(f"Created organization with ID {organization_id} for parish {parish.name}")
-                else:
-                    organization_id = parish.organization_id
-                    logger.info(f"Parish {parish.name} already has organization ID {organization_id}")
-                
-                # Set as user's primary organization
-                user.primary_organization_id = organization_id
-                logger.info(f"Set primary organization {organization_id} for user {user_id}")
-                
-                # Auto-subscribe to organization's channels
-                result = await self.session.execute(
-                    select(Channel).where(Channel.organization_id == organization_id)
+
+        # Handle organization directly
+        if organization_id:
+            # Verify organization exists
+            result = await self.session.execute(
+                select(Organization).where(Organization.id == organization_id)
+            )
+            organization = result.scalar_one_or_none()
+
+            if not organization:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Organization not found",
                 )
-                channels = result.scalars().all()
-                
-                logger.info(f"Found {len(channels)} channels for organization {organization_id}")
-                
-                for channel in channels:
-                    # Check if already subscribed
-                    existing = await self.session.execute(
-                        select(ChannelSubscription).where(
-                            ChannelSubscription.user_id == user_id,
-                            ChannelSubscription.channel_id == channel.id
-                        )
+
+            # Set as user's primary organization
+            user.primary_organization_id = organization_id
+            logger.info(f"Set primary organization {organization_id} for user {user_id}")
+
+            # Auto-subscribe to organization's channels
+            result = await self.session.execute(
+                select(Channel).where(Channel.organization_id == organization_id)
+            )
+            channels = result.scalars().all()
+
+            logger.info(f"Found {len(channels)} channels for organization {organization_id}")
+
+            for channel in channels:
+                # Check if already subscribed
+                existing = await self.session.execute(
+                    select(ChannelSubscription).where(
+                        ChannelSubscription.user_id == user_id,
+                        ChannelSubscription.channel_id == channel.id
                     )
-                    if not existing.scalar_one_or_none():
-                        subscription = ChannelSubscription(
-                            user_id=user_id,
-                            channel_id=channel.id,
-                            created_at=datetime.utcnow()
-                        )
-                        self.session.add(subscription)
-                        logger.info(f"Subscribed user {user_id} to channel {channel.id} ({channel.name})")
-        
+                )
+                if not existing.scalar_one_or_none():
+                    subscription = ChannelSubscription(
+                        user_id=user_id,
+                        channel_id=channel.id,
+                        created_at=datetime.utcnow()
+                    )
+                    self.session.add(subscription)
+                    logger.info(f"Subscribed user {user_id} to channel {channel.id} ({channel.name})")
+
         user.onboarding_completed = True
         await self.session.commit()
         

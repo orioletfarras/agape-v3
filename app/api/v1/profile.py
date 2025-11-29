@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.database import get_db
 from app.application.services.user_service import UserService
-from app.application.schemas import (
+from app.domain.schemas import (
     UserProfileResponse,
     UpdatePersonalInfoRequest,
     UpdatePersonalInfoResponse,
@@ -139,7 +139,7 @@ async def complete_profile(
     return await user_service.complete_profile(
         current_user.id,
         data.nickname,
-        data.parish_id,
+        data.organization_id,
     )
 
 

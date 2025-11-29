@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.database import get_db
 from app.application.services.auth_service import AuthService
-from app.application.schemas import (
+from app.domain.schemas import (
     LoginRequest,
     LoginResponse,
     RegisterStartRequest,

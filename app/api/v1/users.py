@@ -5,7 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.infrastructure.database import get_db
 from app.infrastructure.database.repositories import UserRepository
 from app.application.services import UserService
-from app.application.schemas import UserCreate, UserUpdate, UserResponse
+from app.domain.schemas import UserCreate, UserUpdate, UserResponse
 
 router = APIRouter(prefix="/users", tags=["users"])
 
