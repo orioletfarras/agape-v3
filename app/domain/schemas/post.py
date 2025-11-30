@@ -115,6 +115,8 @@ class PostReactionResponse(BaseModel):
     success: bool
     action: str
     new_count: int
+    already_liked: Optional[bool] = None
+    already_prayed: Optional[bool] = None
 
 
 class PostDeleteResponse(BaseModel):

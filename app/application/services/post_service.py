@@ -198,10 +198,15 @@ class PostService:
 
         if action == "like":
             success = await self.repo.add_like(post_id, user_id)
+
+            # If user already liked, return 200 with already_liked flag
             if not success:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="You already liked this post"
+                current_count = await self.repo.get_likes_count(post_id)
+                return PostReactionResponse(
+                    success=True,
+                    action=action,
+                    new_count=current_count,
+                    already_liked=True
                 )
         elif action == "unlike":
             success = await self.repo.remove_like(post_id, user_id)
@@ -222,7 +227,8 @@ class PostService:
         return PostReactionResponse(
             success=True,
             action=action,
-            new_count=new_count
+            new_count=new_count,
+            already_liked=False
         )
 
     async def toggle_pray(self, post_id: int, user_id: int, action: str) -> PostReactionResponse:
@@ -237,10 +243,15 @@ class PostService:
 
         if action == "pray":
             success = await self.repo.add_pray(post_id, user_id)
+
+            # If user already prayed, return 200 with already_prayed flag
             if not success:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="You already prayed for this post"
+                current_count = await self.repo.get_prays_count(post_id)
+                return PostReactionResponse(
+                    success=True,
+                    action=action,
+                    new_count=current_count,
+                    already_prayed=True
                 )
         elif action == "unpray":
             success = await self.repo.remove_pray(post_id, user_id)
@@ -261,7 +272,8 @@ class PostService:
         return PostReactionResponse(
             success=True,
             action=action,
-            new_count=new_count
+            new_count=new_count,
+            already_prayed=False
         )
 
     async def toggle_favorite(self, post_id: int, user_id: int, action: str) -> PostReactionResponse:
