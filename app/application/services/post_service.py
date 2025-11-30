@@ -9,6 +9,7 @@ from app.domain.schemas.post import (
     PostReactionResponse, PostDeleteResponse,
     PostAuthorResponse, PostChannelResponse, PostEventResponse
 )
+from app.infrastructure.database.models import User
 
 
 class PostService:
@@ -109,11 +110,19 @@ class PostService:
         self,
         post_id: int,
         user_id: int,
+        user: User,
         text: Optional[str] = None,
         images: Optional[List[str]] = None,
-        video_url: Optional[str] = None
+        video_url: Optional[str] = None,
+        posttag: Optional[str] = None
     ) -> PostResponse:
-        """Update a post (only by author)"""
+        """
+        Update a post.
+        User must be:
+        - Superadmin, OR
+        - Channel admin, OR
+        - Organization admin
+        """
         # Get post
         post = await self.repo.get_post_by_id(post_id)
         if not post:
@@ -122,11 +131,12 @@ class PostService:
                 detail="Post not found"
             )
 
-        # Check ownership
-        if post.author_id != user_id:
+        # Check permissions (superadmin, channel admin, or org admin)
+        can_modify = await self.repo.check_user_can_manage_post(user_id, post.channel_id, user.role)
+        if not can_modify:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="You can only update your own posts"
+                detail="You must be a superadmin, channel admin, or organization admin to modify posts"
             )
 
         # Update post
@@ -134,13 +144,20 @@ class PostService:
             post_id=post_id,
             text=text,
             images=images,
-            video_url=video_url
+            video_url=video_url,
+            posttag=posttag
         )
 
         return await self._build_post_response(updated_post, user_id)
 
-    async def delete_post(self, post_id: int, user_id: int) -> PostDeleteResponse:
-        """Delete a post (only by author)"""
+    async def delete_post(self, post_id: int, user_id: int, user: User) -> PostDeleteResponse:
+        """
+        Delete a post.
+        User must be:
+        - Superadmin, OR
+        - Channel admin, OR
+        - Organization admin
+        """
         # Get post
         post = await self.repo.get_post_by_id(post_id)
         if not post:
@@ -149,11 +166,12 @@ class PostService:
                 detail="Post not found"
             )
 
-        # Check ownership
-        if post.author_id != user_id:
+        # Check permissions (superadmin, channel admin, or org admin)
+        can_modify = await self.repo.check_user_can_manage_post(user_id, post.channel_id, user.role)
+        if not can_modify:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="You can only delete your own posts"
+                detail="You must be a superadmin, channel admin, or organization admin to delete posts"
             )
 
         # Delete post
@@ -330,10 +348,10 @@ class PostService:
         favorites_count = await self.repo.get_favorites_count(post_id)
 
         return PostStatsResponse(
-            likes_count=likes_count,
-            prays_count=prays_count,
-            favorites_count=favorites_count,
-            comments_count=0  # Will be implemented with comments module
+            like_count=likes_count,
+            pray_count=prays_count,
+            favorite_count=favorites_count,
+            comment_count=0  # Will be implemented with comments module
         )
 
     async def get_user_favorites(
@@ -408,10 +426,10 @@ class PostService:
             video_url=post.video_url,
             created_at=post.created_at,
             updated_at=post.updated_at,
-            likes_count=likes_count,
-            prays_count=prays_count,
-            favorites_count=favorites_count,
-            comments_count=0,  # Will be implemented with comments module
+            like_count=likes_count,
+            pray_count=prays_count,
+            favorite_count=favorites_count,
+            comment_count=0,  # Will be implemented with comments module
             is_liked=is_liked,
             is_prayed=is_prayed,
             is_favorited=is_favorited,

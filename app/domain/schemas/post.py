@@ -21,6 +21,7 @@ class UpdatePostRequest(BaseModel):
     text: Optional[str] = Field(None, min_length=1, max_length=10000)
     images: Optional[List[str]] = None
     video_url: Optional[str] = None
+    posttag: Optional[str] = Field(None, max_length=100)
 
 
 class PostReactionRequest(BaseModel):
@@ -74,10 +75,10 @@ class PostResponse(BaseModel):
     updated_at: datetime
 
     # Counts
-    likes_count: int = 0
-    prays_count: int = 0
-    favorites_count: int = 0
-    comments_count: int = 0
+    like_count: int = 0
+    pray_count: int = 0
+    favorite_count: int = 0
+    comment_count: int = 0
 
     # Current user reactions
     is_liked: bool = False
@@ -103,10 +104,10 @@ class PostListResponse(BaseModel):
 
 class PostStatsResponse(BaseModel):
     """Post statistics"""
-    likes_count: int
-    prays_count: int
-    favorites_count: int
-    comments_count: int
+    like_count: int
+    pray_count: int
+    favorite_count: int
+    comment_count: int
 
 
 class PostReactionResponse(BaseModel):
