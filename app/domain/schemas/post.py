@@ -86,6 +86,9 @@ class PostResponse(BaseModel):
     is_favorited: bool = False
     is_hidden: bool = False
 
+    # Post status
+    is_published: bool = True
+
     # Related data
     author: Optional[PostAuthorResponse] = None
     channel: Optional[PostChannelResponse] = None

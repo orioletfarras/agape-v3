@@ -446,6 +446,7 @@ class PostService:
             is_prayed=is_prayed,
             is_favorited=is_favorited,
             is_hidden=is_hidden,
+            is_published=post.is_published,
             author=author,
             channel=channel
         )
