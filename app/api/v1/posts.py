@@ -121,16 +121,18 @@ async def update_post(
     Update a post
 
     **Requirements:**
-    - Only the post author can update it
+    - User must be superadmin, channel admin, or organization admin
     - Can update: content, images, videos
     - Cannot update: channel_id, author_id, event_id
     """
     return await post_service.update_post(
         post_id=post_id,
         user_id=current_user.id,
+        user=current_user,
         text=data.text,
         images=data.images,
-        video_url=data.video_url
+        video_url=data.video_url,
+        posttag=data.posttag
     )
 
 
@@ -144,10 +146,10 @@ async def delete_post(
     Delete a post
 
     **Requirements:**
-    - Only the post author can delete it
+    - User must be superadmin, channel admin, or organization admin
     - Deletes all related data (likes, prays, favorites, comments)
     """
-    return await post_service.delete_post(post_id, current_user.id)
+    return await post_service.delete_post(post_id, current_user.id, current_user)
 
 
 # ============================================================
@@ -210,31 +212,6 @@ async def toggle_favorite(
     """
     return await post_service.toggle_favorite(post_id, current_user.id, data.action)
 
-
-@router.post("/{post_id}/hide", status_code=status.HTTP_200_OK)
-async def hide_post(
-    post_id: int,
-    current_user: User = Depends(get_current_user),
-    post_service: PostService = Depends(get_post_service)
-):
-    """
-    Hide a post from the user's feed
-
-    Hidden posts won't appear in the feed unless include_hidden=true
-    """
-    return await post_service.hide_post(post_id, current_user.id)
-
-
-@router.delete("/{post_id}/hide", status_code=status.HTTP_200_OK)
-async def unhide_post(
-    post_id: int,
-    current_user: User = Depends(get_current_user),
-    post_service: PostService = Depends(get_post_service)
-):
-    """
-    Unhide a previously hidden post
-    """
-    return await post_service.unhide_post(post_id, current_user.id)
 
 
 # ============================================================
@@ -474,7 +451,7 @@ async def get_event_posts(
 # POST MODERATION ENDPOINTS
 # ============================================================
 
-@router.post("/post-publish/{postId}", status_code=status.HTTP_200_OK)
+@router.post("/{postId}/publish", status_code=status.HTTP_200_OK)
 async def publish_post(
     postId: int,
     current_user: User = Depends(get_current_user),
@@ -493,7 +470,7 @@ async def publish_post(
     return await post_service.publish_post(postId)
 
 
-@router.post("/post-unpublish/{postId}", status_code=status.HTTP_200_OK)
+@router.post("/{postId}/unpublish", status_code=status.HTTP_200_OK)
 async def unpublish_post(
     postId: int,
     current_user: User = Depends(get_current_user),
@@ -512,7 +489,7 @@ async def unpublish_post(
     return await post_service.unpublish_post(postId)
 
 
-@router.post("/post-mark-reviewed/{postId}", status_code=status.HTTP_200_OK)
+@router.post("/{postId}/mark-reviewed", status_code=status.HTTP_200_OK)
 async def mark_post_reviewed(
     postId: int,
     current_user: User = Depends(get_current_user),
@@ -531,7 +508,7 @@ async def mark_post_reviewed(
     return await post_service.mark_post_reviewed(postId)
 
 
-@router.post("/suspect_post/{postId}", status_code=status.HTTP_200_OK)
+@router.post("/{postId}/mark-suspect", status_code=status.HTTP_200_OK)
 async def suspect_post(
     postId: int,
     current_user: User = Depends(get_current_user),
@@ -574,3 +551,41 @@ async def get_post_prays_extended(
     ```
     """
     return await post_service.get_post_prays_extended(id_code)
+
+
+@router.post("/hide_post/{postId}", status_code=status.HTTP_200_OK)
+async def hide_post(
+    postId: int,
+    current_user: User = Depends(get_current_user),
+    post_service: PostService = Depends(get_post_service)
+):
+    """
+    Hide a post from the user's feed
+
+    **Response:**
+    ```json
+    {
+      "success": true
+    }
+    ```
+    """
+    return await post_service.hide_post(postId, current_user.id)
+
+
+@router.post("/unhide_post/{postId}", status_code=status.HTTP_200_OK)
+async def unhide_post(
+    postId: int,
+    current_user: User = Depends(get_current_user),
+    post_service: PostService = Depends(get_post_service)
+):
+    """
+    Unhide a post (show it again in the user's feed)
+
+    **Response:**
+    ```json
+    {
+      "success": true
+    }
+    ```
+    """
+    return await post_service.unhide_post(postId, current_user.id)
